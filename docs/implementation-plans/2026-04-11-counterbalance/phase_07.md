@@ -381,7 +381,10 @@ jobs:
             - name: Run unit tests
               env:
                   BASE_REF: ${{ github.event.pull_request.base.sha || 'origin/main' }}
-              run: node --test tests/
+              # node --test <dir> does not auto-recurse the directory; the bare
+              # form errors with MODULE_NOT_FOUND on both 22.14 and 22.20.
+              # Use the shell glob explicitly so every *.test.mjs file is enumerated.
+              run: node --test tests/*.test.mjs
 
             - name: Lint markdown
               run: npx markdownlint-cli2@0.18.0
