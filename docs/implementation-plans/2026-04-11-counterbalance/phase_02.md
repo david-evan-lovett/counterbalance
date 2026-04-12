@@ -4,7 +4,7 @@
 
 **Architecture:** Four small `.mjs` modules in `plugins/counterbalance/lib/`. `cascade.mjs` and `parser.mjs` are lifted from Anvil with attribution headers and adapted to the `voices` kind and `VoiceProfile` shape respectively. `windows-path.mjs` is a ~10-line helper lifted from `hooks/principle-inject.mjs`. `resolver.mjs` is the public entry point + CLI.
 
-**Tech Stack:** Node ≥ 22.20.0, ESM `.mjs`, `js-yaml`, `node:fs/promises`, `node:path`. No new dependencies.
+**Tech Stack:** Node ≥ 22.14.0, ESM `.mjs`, `js-yaml`, `node:fs/promises`, `node:path`. No new dependencies.
 
 **Scope:** 2 of 8 phases.
 
@@ -79,7 +79,7 @@ const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
 
 **Behavior branches:**
 
-1. File unreadable → warn `[counterbalance] Skipping voice profile (unreadable): ${filePath}` and return `null`.
+1. File unreadable → return `null`. For `ENOENT` ("file does not exist"), return silently — that is the normal "no profile at this layer" signal that the cascade relies on. For every other error code (`EACCES`, `EIO`, `ELOOP`, ...) warn `[counterbalance] Skipping voice profile (unreadable): ${filePath} — ${err.message}` to stderr before returning. Silencing ENOENT keeps real filesystem errors visible and stops every bare-repo `/ghost` invocation from emitting three spurious warnings.
 2. No `---` frontmatter section found → treat the whole file as body, set `frontmatter = {}`, derive `id` from the filename stem (e.g. `default.md` → `"default"`, `.counterbalance.md` → `"default"` since the local override is conventionally treated as the default profile), return a valid `VoiceProfile`. **This is a deliberate divergence from Anvil's `principles.mjs`**, which requires frontmatter. Voice profiles are allowed to be pure markdown with no metadata.
 3. `---` section found but `yaml.load` throws → warn `[counterbalance] Skipping voice profile (bad YAML): ${filePath} — ${err.message}` and return `null`. **This is the failure path that AC2.7 verifies.**
 4. `---` section parses but result is not an object (e.g. `null`, a scalar, or an array) → warn `[counterbalance] Skipping voice profile (frontmatter is not a mapping): ${filePath}` and return `null`.

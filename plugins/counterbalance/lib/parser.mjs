@@ -17,8 +17,14 @@ export async function parseVoiceProfile(filePath, source) {
     let content;
     try {
         content = await readFile(filePath, 'utf-8');
-    } catch {
-        console.warn(`[counterbalance] Skipping voice profile (unreadable): ${filePath}`);
+    } catch (err) {
+        // ENOENT is the normal "no profile configured at this layer" signal —
+        // the cascade's whole job is to try the next layer. Silencing ENOENT
+        // keeps real errors (EACCES, EIO, ELOOP, ...) visible instead of
+        // drowning them in noise on every bare-repo invocation.
+        if (err.code !== 'ENOENT') {
+            console.warn(`[counterbalance] Skipping voice profile (unreadable): ${filePath} — ${err.message}`);
+        }
         return null;
     }
 
@@ -33,14 +39,9 @@ export async function parseVoiceProfile(filePath, source) {
         try {
             const parsed = yaml.load(match[1]);
 
-            // Branch 4: frontmatter parsed but is not an object
-            if (parsed !== null && parsed !== undefined && typeof parsed !== 'object') {
-                console.warn(`[counterbalance] Skipping voice profile (frontmatter is not a mapping): ${filePath}`);
-                return null;
-            }
-
-            // Branch 4b: frontmatter is null or undefined
-            if (parsed === null || parsed === undefined) {
+            // Branch 4: frontmatter must be a mapping — reject null, scalars, arrays.
+            // typeof [] === 'object' so Array.isArray is the only way to catch arrays.
+            if (parsed === null || parsed === undefined || typeof parsed !== 'object' || Array.isArray(parsed)) {
                 console.warn(`[counterbalance] Skipping voice profile (frontmatter is not a mapping): ${filePath}`);
                 return null;
             }

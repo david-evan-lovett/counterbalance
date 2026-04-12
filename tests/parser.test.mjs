@@ -76,6 +76,61 @@ test('parseVoiceProfile: no frontmatter treated as pure markdown body', async (t
   }
 });
 
+test('parseVoiceProfile: frontmatter array returns null and warns', async (t) => {
+  tempDir = await mkdtemp(join(os.tmpdir(), 'counterbalance-parser-'));
+
+  try {
+    const testFile = join(tempDir, 'array.md');
+    // YAML array frontmatter — valid YAML but not a mapping. typeof [] === 'object'
+    // so the naive guard would accept it; the parser must explicitly reject arrays.
+    await writeFile(testFile, '---\n- one\n- two\n---\nbody\n', 'utf-8');
+
+    let warned = false;
+    let warnMessage = '';
+    const originalWarn = console.warn;
+    console.warn = (msg) => {
+      warned = true;
+      warnMessage = msg;
+    };
+
+    try {
+      const result = await parseVoiceProfile(testFile, 'local');
+      assert.strictEqual(result, null, 'array frontmatter should return null');
+      assert.ok(warned, 'should have warned');
+      assert.ok(
+        warnMessage.startsWith('[counterbalance] Skipping voice profile (frontmatter is not a mapping):'),
+        `warning should carry the "not a mapping" prefix, got: ${warnMessage}`,
+      );
+    } finally {
+      console.warn = originalWarn;
+    }
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('parseVoiceProfile: missing file (ENOENT) returns null silently', async (t) => {
+  tempDir = await mkdtemp(join(os.tmpdir(), 'counterbalance-parser-'));
+
+  try {
+    const missing = join(tempDir, 'does-not-exist.md');
+
+    let warned = false;
+    const originalWarn = console.warn;
+    console.warn = () => { warned = true; };
+
+    try {
+      const result = await parseVoiceProfile(missing, 'local');
+      assert.strictEqual(result, null, 'missing file should return null');
+      assert.strictEqual(warned, false, 'ENOENT must not emit a warning — it is the normal "no profile here" signal');
+    } finally {
+      console.warn = originalWarn;
+    }
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('parseVoiceProfile: frontmatter null (empty YAML block) returns null', async (t) => {
   tempDir = await mkdtemp(join(os.tmpdir(), 'counterbalance-parser-'));
 

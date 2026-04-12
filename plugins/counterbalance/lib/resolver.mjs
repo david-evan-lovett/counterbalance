@@ -1,7 +1,7 @@
 // Voice profile resolver: walks the three-layer cascade and returns a VoiceProfile | null
 // Uses parser.mjs and cascade.mjs to implement the resolution logic.
 
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { argv } from 'node:process';
 import { parseVoiceProfile } from './parser.mjs';
@@ -48,7 +48,7 @@ export async function resolveVoice(cwd) {
  * Prints JSON to stdout (or empty string if null) and exits 0.
  * On any internal error, prints "null" and exits 0 (fail-open).
  */
-const invokedDirectly = fileURLToPath(import.meta.url) === (await import('node:path')).resolve(argv[1] ?? '');
+const invokedDirectly = fileURLToPath(import.meta.url) === resolve(argv[1] ?? '');
 if (invokedDirectly) {
   (async () => {
     const cwdArg = argv.find(a => a.startsWith('--cwd='))?.slice('--cwd='.length) ?? process.cwd();
