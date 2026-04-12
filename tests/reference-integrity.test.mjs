@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -9,6 +9,11 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 const skillPath = path.resolve(repoRoot, 'plugins/counterbalance/skills/counterbalance/SKILL.md');
 const referencesDir = path.resolve(repoRoot, 'plugins/counterbalance/skills/counterbalance/references');
+const commandsDir = path.resolve(repoRoot, 'plugins/counterbalance/commands');
+const agentsDir = path.resolve(repoRoot, 'plugins/counterbalance/agents');
+const reviewersPath = path.resolve(repoRoot, 'plugins/counterbalance/reviewers.json');
+
+const ROOT_REF = /\$\{CLAUDE_PLUGIN_ROOT\}\/([a-zA-Z0-9_./\\-]+)/g;
 
 // Read SKILL.md
 const skillContent = await readFile(skillPath, 'utf-8');
@@ -87,5 +92,81 @@ test('counterbalance.AC7.3: each benchmark file contains both an in-voice and an
 
     assert.ok(hasInVoice, `${filename} should contain "## In-voice draft" section`);
     assert.ok(hasAISlop, `${filename} should contain "## AI-slop draft" section`);
+  }
+});
+
+test('reference integrity: every ${CLAUDE_PLUGIN_ROOT}-relative path in a command body exists', async () => {
+  const commandFiles = await readdir(commandsDir);
+
+  for (const filename of commandFiles) {
+    if (!filename.endsWith('.md')) continue;
+
+    const filePath = path.resolve(commandsDir, filename);
+    const content = await readFile(filePath, 'utf-8');
+
+    let match;
+    const mentions = [];
+    while ((match = ROOT_REF.exec(content)) !== null) {
+      mentions.push(match[1]);
+    }
+
+    for (const mention of mentions) {
+      const resolvedPath = path.resolve(repoRoot, 'plugins/counterbalance', mention);
+      try {
+        await stat(resolvedPath);
+      } catch (err) {
+        assert.fail(`command ${filename}: referenced path does not exist: ${mention} (resolved to ${resolvedPath})`);
+      }
+    }
+  }
+});
+
+test('reference integrity: every ${CLAUDE_PLUGIN_ROOT}-relative path in an agent body exists', async () => {
+  const agentFiles = await readdir(agentsDir);
+
+  for (const filename of agentFiles) {
+    if (!filename.endsWith('.md')) continue;
+
+    const filePath = path.resolve(agentsDir, filename);
+    const content = await readFile(filePath, 'utf-8');
+
+    let match;
+    const mentions = [];
+    while ((match = ROOT_REF.exec(content)) !== null) {
+      mentions.push(match[1]);
+    }
+
+    for (const mention of mentions) {
+      const resolvedPath = path.resolve(repoRoot, 'plugins/counterbalance', mention);
+      try {
+        await stat(resolvedPath);
+      } catch (err) {
+        assert.fail(`agent ${filename}: referenced path does not exist: ${mention} (resolved to ${resolvedPath})`);
+      }
+    }
+  }
+});
+
+test('reference integrity: every reviewers.json agent entry points to an existing file', async () => {
+  const reviewersContent = await readFile(reviewersPath, 'utf-8');
+  const reviewers = JSON.parse(reviewersContent);
+
+  assert.ok(Array.isArray(reviewers.reviewers), 'reviewers.json should have a "reviewers" array');
+
+  for (const reviewer of reviewers.reviewers) {
+    if (!reviewer.agent) continue;
+
+    // Format is "plugin-namespace:agent-name"
+    const [namespace, agentName] = reviewer.agent.split(':');
+
+    // For counterbalance plugin, resolve to plugins/counterbalance/agents/<name>.md
+    if (namespace === 'counterbalance') {
+      const agentPath = path.resolve(repoRoot, 'plugins/counterbalance/agents', `${agentName}.md`);
+      try {
+        await stat(agentPath);
+      } catch (err) {
+        assert.fail(`reviewers.json: agent "${reviewer.agent}" does not exist at ${agentPath}`);
+      }
+    }
   }
 });
