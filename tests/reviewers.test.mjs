@@ -57,7 +57,7 @@ test('loadRegistry throws a clear error on missing registry file', async () => {
 });
 
 test('loadRegistry throws a clear error on malformed JSON', async () => {
-    const { mkdir, writeFile, rm } = await import('node:fs/promises');
+    const { writeFile, rm } = await import('node:fs/promises');
     const { mkdtemp } = await import('node:fs');
     const { promisify } = await import('node:util');
     const mkdtempAsync = promisify(mkdtemp);
@@ -75,8 +75,17 @@ test('loadRegistry throws a clear error on malformed JSON', async () => {
     }
 });
 
+test('aggregateFindings v1 stub passes outputs through unchanged', () => {
+    const outputs = [
+        { reviewer: 'voice-check', findings: [] },
+        { reviewer: 'voice-check', findings: [{ line: 3, severity: 'warning', rule: 'x', quote: 'q', message: 'm' }] },
+    ];
+    assert.deepStrictEqual(aggregateFindings(outputs), outputs);
+    assert.strictEqual(aggregateFindings(outputs), outputs, 'v1 stub returns the same reference (identity)');
+});
+
 test('loadRegistry throws a clear error when the reviewers array is missing', async () => {
-    const { mkdir, writeFile, rm } = await import('node:fs/promises');
+    const { writeFile, rm } = await import('node:fs/promises');
     const { mkdtemp } = await import('node:fs');
     const { promisify } = await import('node:util');
     const mkdtempAsync = promisify(mkdtemp);
