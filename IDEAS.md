@@ -1,0 +1,4 @@
+- import sonnet reviewers
+- different reviewrs, jargon, reading-level, 
+- prototyping principles - over a hundred, most off by default, injected at ghost prompt time. 
+- marker system for corrections - present soe options
