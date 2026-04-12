@@ -1,0 +1,14 @@
+{
+    "reviewers": [
+        {
+            "id": "voice-check",
+            "agent": "counterbalance:voice-reviewer",
+            "command": "/counterbalance:voice-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Checks a draft against the active voice profile and flags violations as line-referenced findings."
+        }
+    ]
+}
