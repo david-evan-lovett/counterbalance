@@ -1,6 +1,6 @@
 {
     "name": "counterbalance",
-    "description": "A voice-aware drafter and extensible reviewer pipeline. Provides /ghost, /voice-refresh, and /voice-check.",
+    "description": "A voice-aware drafter and extensible reviewer pipeline with pipeline extensions. Provides /ghost, /voice-refresh, and /voice-check.",
     "version": "0.0.1",
     "author": {
         "name": "David Lovett"
