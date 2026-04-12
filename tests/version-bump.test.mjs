@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -50,7 +51,7 @@ test('counterbalance.AC8.3: plugin.json version bumped when body changed', async
       return;
     }
 
-    const currentContent = require('fs').readFileSync(path.resolve(repoRoot, basePath), 'utf-8');
+    const currentContent = readFileSync(path.resolve(repoRoot, basePath), 'utf-8');
 
     const baseObj = JSON.parse(baseContent);
     const currentObj = JSON.parse(currentContent);
@@ -89,7 +90,7 @@ test('counterbalance.AC8.3: marketplace.json version bumped when body changed', 
       return;
     }
 
-    const currentContent = require('fs').readFileSync(path.resolve(repoRoot, basePath), 'utf-8');
+    const currentContent = readFileSync(path.resolve(repoRoot, basePath), 'utf-8');
 
     const baseObj = JSON.parse(baseContent);
     const currentObj = JSON.parse(currentContent);
@@ -131,7 +132,7 @@ test('counterbalance.AC8.3: no version bump required when body identical to base
       return;
     }
 
-    const currentPluginContent = require('fs').readFileSync(path.resolve(repoRoot, pluginPath), 'utf-8');
+    const currentPluginContent = readFileSync(path.resolve(repoRoot, pluginPath), 'utf-8');
 
     const basePluginObj = JSON.parse(basePluginContent);
     const currentPluginObj = JSON.parse(currentPluginContent);
