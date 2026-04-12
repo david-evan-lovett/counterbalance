@@ -22,7 +22,7 @@ This is an infrastructure phase. **Verifies: None** — no functionality ACs map
 
 - ✓ `js-yaml ^4.1.0` is MIT-licensed and used by the sibling Anvil plugin as its sole runtime dep.
 - ✓ `claude plugin validate <dir>` is a real subcommand. Verified at https://code.claude.com/docs/en/plugin-marketplaces#validation-and-testing. It checks `plugin.json`, skill/agent/command frontmatter, and `hooks/hooks.json`. Takes a single directory arg.
-- ✓ `metadata.pluginRoot` shorthand is verified: "Base directory prepended to relative plugin source paths (for example, `"./plugins"` lets you write `"source": "formatter"` instead of `"source": "./plugins/formatter"`)." Source: https://code.claude.com/docs/en/plugin-marketplaces#optional-metadata.
+- ⚠ `metadata.pluginRoot` shorthand is documented but does NOT validate on the current `@anthropic-ai/claude-code` CLI. Docs claim: "Base directory prepended to relative plugin source paths (for example, `"./plugins"` lets you write `"source": "formatter"` instead of `"source": "./plugins/formatter"`)." Source: <https://code.claude.com/docs/en/plugin-marketplaces#optional-metadata>. **Empirical finding (2026-04-12, validator rejects `"source": "counterbalance"` with `plugins.0.source: Invalid input`):** use the long form `"source": "./plugins/counterbalance"`. `pluginRoot` is still set because it may be honored by future validators and by the installer even if the current validator's schema requires a fully-qualified relative path.
 - ✗ The design doc's mention of a `$schema` URL for marketplace.json cannot be verified — Anthropic publishes no official JSON Schema. **Decision:** omit `$schema` from both manifests. Revisit if/when an official schema ships.
 - ⚠ Version precedence: per https://code.claude.com/docs/en/plugins-reference#metadata-fields, if both `plugin.json` and the marketplace entry set `version`, `plugin.json` wins. **Decision:** set `version` only in `plugin.json`, omit from the marketplace plugin entry. Phase 8 bumps both in lockstep but this phase keeps it single-sourced.
 - ⚠ `claude plugin validate` exit-code contract is undocumented. The validate command is still usable — it prints errors and a non-zero exit in failure cases based on practice — but CI should shell-test it in Phase 7 rather than assume behavior.
@@ -189,7 +189,7 @@ Note: `node_modules/` is gitignored.
 
 **Step 1: Create the marketplace catalog**
 
-Use `metadata.pluginRoot` shorthand so the plugin entry's `source` can be the bare name `counterbalance` rather than `./plugins/counterbalance`. Omit `version` from the plugin entry — `plugin.json` is authoritative for version.
+Use `./plugins/counterbalance` as the `source` (the long form). The docs advertise a `pluginRoot` shorthand (`"source": "counterbalance"`) but the current `claude plugin validate` rejects that form with `plugins.0.source: Invalid input` — see the warning in External Dependency Findings above. Keep `metadata.pluginRoot` set anyway: it's cheap and forward-compatible. Omit `version` from the plugin entry — `plugin.json` is authoritative for version.
 
 Path: `c:\Users\david\Repos\counterbalance\.claude-plugin\marketplace.json`
 
@@ -206,7 +206,7 @@ Path: `c:\Users\david\Repos\counterbalance\.claude-plugin\marketplace.json`
     "plugins": [
         {
             "name": "counterbalance",
-            "source": "counterbalance",
+            "source": "./plugins/counterbalance",
             "description": "Voice-aware drafter and extensible reviewer pipeline for Claude Code.",
             "author": { "name": "David Lovett" },
             "license": "MIT",
@@ -407,10 +407,12 @@ Expected: no errors, exit 0.
 **Step 2: Run the test suite**
 
 ```bash
-node --test tests/
+node --test tests/manifests.test.mjs
 ```
 
 Expected: all tests pass, exit 0.
+
+Note: the file-form is used (rather than `node --test tests/`) because recursive directory discovery for `node --test` landed after Node 22.14.0, which is the declared engines floor.
 
 **Step 3: Run `npm install --dry-run` to confirm package.json is healthy**
 
