@@ -78,6 +78,7 @@ This is the core workflow. It repeats until the piece is done.
 ### Step 1: Intake
 
 The user provides raw material. This can be:
+
 - **Direct dictation** — stream-of-consciousness about what happened, what they think, what they built. This is the best input. Don't interrupt it.
 - **Rough notes** — bullet points, fragments, half-sentences
 - **An existing AI draft** — something Claude or another tool wrote that needs a "voice pass"
@@ -87,6 +88,7 @@ Whatever it is, read it. Don't start writing yet.
 ### Step 2: Analysis (silent)
 
 Before drafting, compare the raw input against the voice guide. Note:
+
 - Which phrases are *already* in the user's voice (preserve these exactly)
 - Which phrases need cleaning (grammar, clarity) but not rewriting
 - Which phrases are AI-voice or generic and need replacement
@@ -124,17 +126,19 @@ Present the draft. The user will flag specific lines. This is the most important
 
 The user may give feedback in a structured format using the `<-` operator:
 
-```
+```text
 Everyone should write an agent. That's how you program now. <- One line. LLMs are just a high level programming language.
 Then move into the digression.
 No wonder ed3d felt better but not right <- I would say, "this was just like how programmers used to carry around scripts"
 ```
 
 How to read this:
+
 - Lines WITH `<-` are direct feedback. The text before `<-` is the line being corrected. The text after `<-` is what the user wants instead, or how they'd rewrite it.
 - Lines WITHOUT `<-` are general notes about structure, flow, or direction. They apply to the surrounding context, not a specific line.
 
 When the user corrects a line:
+
 1. **Apply the correction exactly.** If they rewrote it, use their rewrite. If they described what they want, draft it and confirm.
 2. **Analyze the delta.** What did you write vs. what they wrote? Extract the pattern. Say it back to them: "Looks like you prefer X over Y because Z — should I add that to the voice guide?"
 3. **If confirmed, update the voice guide immediately.** Don't wait until the end. The guide is a living document.
@@ -152,6 +156,7 @@ As the piece develops, maintain:
 ### Step 6: Grammar Check
 
 When a draft is stable, run a grammar check. Present issues as questions, not corrections — the user might be doing it on purpose. For each issue:
+
 - Quote the line
 - Explain the concern
 - Ask what they meant
@@ -164,7 +169,7 @@ Also report the reading level (Flesch-Kincaid or equivalent) and flag if it drif
 
 For multi-entry projects, use this structure (names are flexible):
 
-```
+```text
 project-root/
   INDEX.md           # Links to all entries + pending thoughts
   blog/              # Or entries/, log/, whatever fits

@@ -2,7 +2,7 @@
 
 **Goal:** `.github/workflows/validate.yml` runs on every PR and on tag push. It is the enforcement point for all `AC8.*` criteria. Deliberately broken manifests, missing references, personal data leaks, or a manifest change without a version bump all fail loudly.
 
-**Architecture:** One GitHub Actions workflow + five new tests that the workflow runs alongside the existing `node --test` suite. A `.markdownlint.jsonc` config tunes markdownlint-cli2 for the project's conventions. The workflow uses an ephemeral Node 22 install + `@anthropic-ai/claude-code` installed as an `npx` target pinned to a specific version.
+**Architecture:** One GitHub Actions workflow + five new tests that the workflow runs alongside the existing `node --test` suite. A `.markdownlint-cli2.jsonc` config tunes markdownlint-cli2 for the project's conventions. The workflow uses an ephemeral Node 22 install + `@anthropic-ai/claude-code` installed as an `npx` target pinned to a specific version.
 
 **Tech Stack:** GitHub Actions (`actions/checkout@v4`, `actions/setup-node@v4`), Node 22.20.0, `markdownlint-cli2` (latest), the Claude Code CLI for `claude plugin validate`. No additional runtime deps — `markdownlint-cli2` is invoked via `npx` without adding it to `package.json`.
 
@@ -33,7 +33,7 @@ This phase implements and tests:
 - ⚠ **`claude plugin validate` exit-code behavior is not documented.** The workflow must shell-test this in a spike before relying on non-zero exit as a gate. Plan: run the validate command in a step, capture stderr/stdout, and grep for error-signal strings (`Invalid JSON syntax`, `File not found`, `failed to parse`) as a belt-and-suspenders fallback on top of the exit code.
 - ⚠ **`claude plugin validate ./plugins/counterbalance`** (plugin-directory-only mode) is not explicitly documented. The docs show it being run from a marketplace directory. **Plan:** run `claude plugin validate .` at the repo root once (validates the marketplace, which in turn validates plugins under it). This single invocation is enough to satisfy AC8.1. Drop the separate per-plugin invocation from the design doc — it's redundant if the single marketplace-level call covers both.
 - ✓ `actions/setup-node@v4` supports Node 22.x. Use `node-version: '22.20.0'` to pin exactly.
-- ✓ `markdownlint-cli2` is installed via `npx markdownlint-cli2@0.18.0` (pin exact version). Config file `.markdownlint.jsonc` is the default name. Source: https://github.com/DavidAnson/markdownlint-cli2.
+- ✓ `markdownlint-cli2` is installed via `npx markdownlint-cli2@0.18.0` (pin exact version). Config file `.markdownlint-cli2.jsonc` is the default name. Source: https://github.com/DavidAnson/markdownlint-cli2.
 - ✓ `markdownlint-cli2` MD040 rule has `allowed_languages` config — needed to whitelist `text` as a valid fenced-code language for the diagrams in this repo's design docs. Source: https://github.com/DavidAnson/markdownlint/blob/main/doc/md040.md.
 - ✓ Installing Claude Code CLI in CI: `npm install -g @anthropic-ai/claude-code` works in an Actions step, though it's large (~100MB with deps). Alternative: use `npx @anthropic-ai/claude-code@latest plugin validate .`. Pin an exact version so CI is reproducible.
 
@@ -238,12 +238,12 @@ Expected: all prior tests plus the 3 new ones pass.
 <!-- END_TASK_4 -->
 
 <!-- START_TASK_5 -->
-### Task 5: `.markdownlint.jsonc` — lint config for the project
+### Task 5: `.markdownlint-cli2.jsonc` — lint config for the project
 
 **Verifies:** counterbalance.AC8.6 (precondition — the workflow in Task 6 runs the lint)
 
 **Files:**
-- Create: `c:\Users\david\Repos\counterbalance\.markdownlint.jsonc`
+- Create: `c:\Users\david\Repos\counterbalance\.markdownlint-cli2.jsonc`
 
 **Implementation:**
 
@@ -528,7 +528,7 @@ Scratch branch deleted. See PR comments for reproduced error output.
 
 - `.github/workflows/validate.yml` exists and runs on PR + push to main + tag push
 - Five new test files from Tasks 1-4 exist and pass locally
-- `.markdownlint.jsonc` exists and `npx markdownlint-cli2` runs clean
+- `.markdownlint-cli2.jsonc` exists and `npx markdownlint-cli2` runs clean
 - All AC8.1–8.7 cases verified — AC8.7 specifically verified by Task 8 (intentional breakage)
 - CI passes green on a clean main-branch PR
 
