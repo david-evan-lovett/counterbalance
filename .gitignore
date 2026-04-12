@@ -10,3 +10,6 @@ settings.local.json
 
 # macOS / editor junk
 .DS_Store
+
+# Scratch workspace for intermediate artifacts
+.scratch/
