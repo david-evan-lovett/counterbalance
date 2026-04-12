@@ -48,8 +48,20 @@ async function checkFile(filePath) {
   const content = await readFile(filePath, 'utf-8');
   const violations = [];
 
-  // Find the position of the "NEVER mutate CLAUDE.md" invariant declaration
-  const invariantIndex = content.indexOf('NEVER mutate CLAUDE.md');
+  // Build line-boundary offsets for the single line that contains the invariant
+  // declaration. Matches on this line are excluded: the declaration is literally
+  // `**NEVER mutate CLAUDE.md.** Do not Write or Edit against any path matching
+  // \`CLAUDE.md\`, \`~/.claude/CLAUDE.md\`, or \`$HOME/.claude/CLAUDE.md\`.` — which
+  // both states the invariant and names the forbidden verbs. Excluding the whole
+  // line is precise; excluding a ±N char window around the declaration is not.
+  let invariantLineStart = -1;
+  let invariantLineEnd = -1;
+  const invariantIdx = content.indexOf('NEVER mutate CLAUDE.md');
+  if (invariantIdx !== -1) {
+    invariantLineStart = content.lastIndexOf('\n', invariantIdx) + 1;
+    const nextNewline = content.indexOf('\n', invariantIdx);
+    invariantLineEnd = nextNewline === -1 ? content.length : nextNewline;
+  }
 
   // Find all occurrences of CLAUDE.md
   const claudeMdRegex = /CLAUDE\.md/g;
@@ -57,17 +69,15 @@ async function checkFile(filePath) {
 
   while ((match = claudeMdRegex.exec(content)) !== null) {
     const offset = match.index;
+
+    // Skip matches that fall inside the invariant declaration line itself
+    if (invariantLineStart !== -1 && offset >= invariantLineStart && offset < invariantLineEnd) {
+      continue;
+    }
+
     const windowStart = Math.max(0, offset - 60);
     const windowEnd = Math.min(content.length, offset + 60 + 'CLAUDE.md'.length);
     const window = content.substring(windowStart, windowEnd);
-
-    // Check if this occurrence is within a reasonable context of the invariant declaration
-    // (e.g., part of the same paragraph or explanation section)
-    // If the invariant declaration exists and this offset is within 500 chars of it,
-    // exclude it from violation checking
-    if (invariantIndex !== -1 && Math.abs(offset - invariantIndex) < 500) {
-      continue;
-    }
 
     // Check if the window contains a violation pattern (actual write/edit operations)
     if (violationPattern.test(window)) {

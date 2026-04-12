@@ -59,11 +59,19 @@ test('counterbalance.AC3.4: agent body contains "<-" correction operator instruc
   const content = await readFile(agentPath, 'utf-8');
   const body = extractBody(content);
 
-  // Look for the section header "## `<-` correction operator" or similar
-  const operatorSectionExists = body.includes('`<-`') || body.includes('`<-` correction');
-  assert.ok(operatorSectionExists, 'body must have a dedicated "<-" correction operator section');
-
+  // Same heuristic as Phase 3 skill-structure test: `<-` must appear within
+  // 500 chars of the word "correction" — catches a stray backtick elsewhere
+  // that would otherwise satisfy the weaker "<- is present" check.
   assert.ok(body.includes('<-'), 'body must mention the "<-" operator');
+
+  const arrowIdx = body.indexOf('<-');
+  const windowStart = Math.max(0, arrowIdx - 250);
+  const windowEnd = Math.min(body.length, arrowIdx + 250);
+  const window = body.slice(windowStart, windowEnd).toLowerCase();
+  assert.ok(
+    window.includes('correction'),
+    'the word "correction" must appear within 500 chars of the first "<-" occurrence (Phase 3 heuristic)',
+  );
 });
 
 test('counterbalance.AC3.6: agent body references fallback-voice.md as the null-profile fallback path', async () => {
