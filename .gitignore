@@ -13,3 +13,6 @@ settings.local.json
 
 # Scratch workspace for intermediate artifacts
 .scratch/
+
+# Hiding docs
+docs/
