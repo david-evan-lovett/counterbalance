@@ -1,2 +1,12 @@
-docs
+# Dependencies
+node_modules/
+
+# Local, never commit
+.claude/settings.local.json
 settings.local.json
+
+# Local voice profile override (per design — users drop this next to a repo they want a one-off voice for)
+.counterbalance.md
+
+# macOS / editor junk
+.DS_Store
