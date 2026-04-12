@@ -9,11 +9,17 @@ const __dirname = join(__filename, '..');
 const repoRoot = join(__dirname, '..');
 const pluginRoot = join(repoRoot, 'plugins', 'counterbalance');
 
-// Directories to scan for violations
+// Directories to scan for violations. `skills/` is included because the
+// skill body is prose that Claude Code auto-loads and models will follow
+// its instructions at runtime — a mutation directive in SKILL.md is just
+// as load-bearing as one in an agent body. The Phase 8 final review
+// caught a residual line 64 in SKILL.md telling the model to write to
+// `~/.claude/CLAUDE.md`; extending the scan prevents that drift.
 const scanDirs = [
   join(pluginRoot, 'agents'),
   join(pluginRoot, 'commands'),
   join(pluginRoot, 'lib'),
+  join(pluginRoot, 'skills'),
 ];
 
 // Pattern to detect violations: Write/Edit operations on CLAUDE.md paths

@@ -61,7 +61,7 @@ Compare the sources against each other AND against what you (the LLM) would natu
 
 ### Output
 
-Build a voice guide structured like this and write it to the user's persistent config (typically `~/.claude/CLAUDE.md` under a "My Voice" section). If one already exists, merge — don't overwrite patterns the user previously confirmed.
+Build a voice guide structured like this and write it to the counterbalance user-layer profile at `$HOME/.claude/plugins/data/counterbalance/profiles/default.md`. Create parent directories as needed. If the file already exists, merge — don't overwrite patterns the user previously confirmed. **Never write to `~/.claude/CLAUDE.md`** — the pre-flight migration reads CLAUDE.md but never mutates it, and this skill must match that invariant.
 
 The guide should cover: registers, sentence structure rules, analogy/naming patterns, anti-patterns, profanity guidance, reading level target, and length notes. Use the user's own examples as illustrations, not invented ones.
 
