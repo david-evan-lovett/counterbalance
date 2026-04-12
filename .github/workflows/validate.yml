@@ -1,0 +1,64 @@
+name: validate
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+        tags: ['v*']
+
+jobs:
+    validate:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  # fetch-depth: 0 ensures version-bump test can see the base ref
+                  fetch-depth: 0
+
+            - name: Set up Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '22.20.0'
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Install Claude Code CLI
+              run: npm install -g @anthropic-ai/claude-code@latest
+              # NOTE: pin exact version once you have a known-good one.
+              # Leaving @latest for the initial v0.1.0 release; tighten in a follow-up.
+
+            - name: Validate marketplace and plugin manifests
+              run: |
+                  set -o pipefail
+                  # Capture both stdout and stderr so we can inspect the output
+                  # even if the exit-code contract is unreliable.
+                  OUT=$(claude plugin validate . 2>&1) || RC=$?
+                  echo "$OUT"
+                  # Belt-and-suspenders: grep for known error-signal strings from
+                  # https://code.claude.com/docs/en/plugin-marketplaces#marketplace-validation-errors
+                  if echo "$OUT" | grep -Eiq "Invalid JSON syntax|File not found|failed to parse|Duplicate plugin name|Path contains"; then
+                      echo "::error ::claude plugin validate reported errors (see above)"
+                      exit 1
+                  fi
+                  # If exit code was non-zero, honor it.
+                  if [ "${RC:-0}" != "0" ]; then
+                      echo "::error ::claude plugin validate exited ${RC}"
+                      exit "${RC}"
+                  fi
+
+            - name: Run unit tests
+              env:
+                  BASE_REF: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+              run: node --test tests/
+
+            - name: Lint markdown
+              run: npx markdownlint-cli2@0.18.0
+
+            - name: License sanity check
+              # Redundant with tests/license-check.test.mjs but provides a clearer
+              # failure signal in the CI log if the LICENSE file is ever deleted.
+              run: |
+                  test -f LICENSE && grep -q "MIT License" LICENSE
