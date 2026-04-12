@@ -1,0 +1,20 @@
+{
+    "name": "counterbalance",
+    "owner": {
+        "name": "David Lovett"
+    },
+    "metadata": {
+        "description": "A single-plugin marketplace hosting the counterbalance writing plugin.",
+        "pluginRoot": "./plugins"
+    },
+    "plugins": [
+        {
+            "name": "counterbalance",
+            "source": "./plugins/counterbalance",
+            "description": "Voice-aware drafter and extensible reviewer pipeline for Claude Code.",
+            "author": { "name": "David Lovett" },
+            "license": "MIT",
+            "keywords": ["writing", "voice", "drafter", "reviewer"]
+        }
+    ]
+}

@@ -1,0 +1,16 @@
+{
+    "name": "counterbalance",
+    "description": "A voice-aware drafter and extensible reviewer pipeline. Provides /ghost, /voice-refresh, and /voice-check.",
+    "version": "0.0.1",
+    "author": {
+        "name": "David Lovett"
+    },
+    "license": "MIT",
+    "keywords": [
+        "writing",
+        "voice",
+        "drafter",
+        "reviewer",
+        "ghost-writer"
+    ]
+}
