@@ -92,7 +92,7 @@ These are not soft rules. Each is asserted by a test file that will fail CI if v
 
 ## Boundaries
 
-- Safe to edit: `plugins/counterbalance/`, `tests/`, `docs/`, `README.md`, `CHANGELOG.md`
+- Safe to edit: `plugins/counterbalance/`, `tests/`, `README.md`, `CHANGELOG.md`
 - Bump version: `plugins/counterbalance/.claude-plugin/plugin.json` only
 - Never add: `version` key to `marketplace.json` plugin entries
 - Never write: to any CLAUDE.md from plugin code (enforced by test)
@@ -104,8 +104,3 @@ These are not soft rules. Each is asserted by a test file that will fail CI if v
 - The `parser.mjs` ENOENT branch is intentionally silent. Other fs errors (EACCES, EIO, ELOOP) warn and return null — don't collapse them.
 - Voice Discovery's CLAUDE.md migration flow is in `agents/counterbalance.md`, not in a lib file. The match heuristic is a regex on headings matching `/voice|writing|tone|style|register|sentence/i`.
 - The skill at `plugins/counterbalance/skills/counterbalance/` has 10 reference files: 6 genre overlays (`genre-*.md`), 3 benchmarks (`benchmark-*.md`), and `fallback-voice.md`. `tests/reference-integrity.test.mjs` enforces that every reference the SKILL.md names actually exists.
-
-## Planning Docs
-
-- `docs/design-plans/2026-04-11-counterbalance.md` — architectural intent and Definition of Done for v0.1.0
-- `docs/implementation-plans/2026-04-11-counterbalance/phase_01..phase_08.md` — phased implementation plan (ed3d-plan-and-execute format)

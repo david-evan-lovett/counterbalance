@@ -95,8 +95,6 @@ node --test tests/*.test.mjs               # runs the full suite (~90 tests)
 npx markdownlint-cli2@0.18.0               # lints README, CHANGELOG, SKILL.md, references
 ```
 
-The architectural intent and Definition of Done for v0.1.0 live at `docs/design-plans/2026-04-11-counterbalance.md`. The phased implementation plan is at `docs/implementation-plans/2026-04-11-counterbalance/`.
-
 ## License
 
 MIT — see [LICENSE](LICENSE).

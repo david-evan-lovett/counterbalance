@@ -23,4 +23,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Prior
 
-- Repo scaffolded; see the design plan at `docs/design-plans/2026-04-11-counterbalance.md` for architectural intent.
+- Repo scaffolded.
