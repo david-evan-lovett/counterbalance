@@ -23,16 +23,41 @@ function isBumped(prev, curr) {
 }
 
 /**
- * Strip and sort keys for deterministic comparison
+ * Recursively sort object keys so equivalent objects produce identical
+ * JSON serializations regardless of author key order.
+ */
+function sortKeysDeep(value) {
+  if (Array.isArray(value)) return value.map(sortKeysDeep);
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((acc, k) => {
+      acc[k] = sortKeysDeep(value[k]);
+      return acc;
+    }, {});
+  }
+  return value;
+}
+
+/**
+ * Produce a stable string representation of a manifest for body-change
+ * detection. Drops `version` (and nested `plugins[n].version`) since
+ * those fields are the thing we're explicitly allowed to change without
+ * triggering a "body changed" verdict.
+ *
+ * WARNING: do not replace the recursive `sortKeysDeep` walk with the
+ * two-arg form `JSON.stringify(obj, Object.keys(obj).sort())`. The second
+ * argument to `JSON.stringify` is a replacer, not a key-order spec —
+ * when passed an array it acts as a top-level key allowlist and silently
+ * strips every nested field. That was a real bug in an earlier version
+ * of this helper: AC8.3 was only catching changes to top-level scalar
+ * fields, missing everything under `metadata.*`, `author.*`, `plugins[n].*`, etc.
  */
 function normalizeForComparison(obj) {
   const stripped = JSON.parse(JSON.stringify(obj));
   delete stripped.version;
-  // For marketplace, also drop nested version fields
   if (stripped.plugins && Array.isArray(stripped.plugins)) {
     stripped.plugins.forEach(p => delete p.version);
   }
-  return JSON.stringify(stripped, Object.keys(stripped).sort());
+  return JSON.stringify(sortKeysDeep(stripped));
 }
 
 const baseRef = process.env.BASE_REF || 'origin/main';
