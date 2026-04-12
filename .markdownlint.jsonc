@@ -1,0 +1,39 @@
+{
+    "config": {
+        "default": true,
+        "MD013": false,
+        "MD040": {
+            "allowed_languages": [
+                "bash",
+                "shell",
+                "sh",
+                "js",
+                "javascript",
+                "ts",
+                "typescript",
+                "json",
+                "jsonc",
+                "yaml",
+                "yml",
+                "markdown",
+                "md",
+                "text",
+                "diff"
+            ]
+        },
+        "MD033": false,
+        "MD041": false
+    },
+    "globs": [
+        "README.md",
+        "CHANGELOG.md",
+        "plugins/counterbalance/skills/counterbalance/SKILL.md",
+        "plugins/counterbalance/skills/counterbalance/references/*.md"
+    ],
+    "ignores": [
+        "node_modules/**",
+        ".scratch/**",
+        "docs/design-plans/**",
+        "docs/implementation-plans/**"
+    ]
+}
