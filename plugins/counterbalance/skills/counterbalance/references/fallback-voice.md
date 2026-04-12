@@ -1,6 +1,6 @@
 # Fallback Voice Patterns
 
-These are sensible defaults for the ghost-writer skill when no user-level voice guide has been created yet. They represent a neutral, competent technical-writing voice that avoids the most common AI-writing tells. Replace them as soon as you have real samples from the user.
+These are sensible defaults for the counterbalance skill when no user-level voice guide has been created yet. They represent a neutral, competent technical-writing voice that avoids the most common AI-writing tells. Replace them as soon as you have real samples from the user.
 
 **These are temporary.** Tell the user you're using defaults and that running Voice Discovery will produce much better results.
 
