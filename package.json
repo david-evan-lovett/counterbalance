@@ -16,7 +16,7 @@
         "url": "https://github.com/david-evan-lovett/counterbalance/issues"
     },
     "engines": {
-        "node": ">=22.20.0"
+        "node": ">=22.14.0"
     },
     "dependencies": {
         "js-yaml": "^4.1.0"
