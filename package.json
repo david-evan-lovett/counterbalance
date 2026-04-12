@@ -1,0 +1,24 @@
+{
+    "name": "counterbalance",
+    "version": "0.0.1",
+    "description": "A Claude Code plugin that gives writers a voice-aware drafting engine and an extensible reviewer pipeline.",
+    "type": "module",
+    "license": "MIT",
+    "author": {
+        "name": "David Lovett"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/david-evan-lovett/counterbalance.git"
+    },
+    "homepage": "https://github.com/david-evan-lovett/counterbalance",
+    "bugs": {
+        "url": "https://github.com/david-evan-lovett/counterbalance/issues"
+    },
+    "engines": {
+        "node": ">=22.20.0"
+    },
+    "dependencies": {
+        "js-yaml": "^4.1.0"
+    }
+}
