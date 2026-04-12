@@ -1,0 +1,4 @@
+{
+    "description": "Literal strings that must never appear in committed counterbalance files. Additions should be one-per-line strings — no regexes. The scan is substring-based and case-sensitive.",
+    "deny": []
+}
