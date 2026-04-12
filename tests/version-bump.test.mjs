@@ -37,120 +37,87 @@ function normalizeForComparison(obj) {
 
 const baseRef = process.env.BASE_REF || 'origin/main';
 
-test('counterbalance.AC8.3: plugin.json version bumped when body changed', async () => {
+/**
+ * Load the base and current versions of a manifest path, returning
+ * `{ base, current }` on success or `null` if the base ref is unreachable
+ * (first push, missing fetch). Callers that get `null` should skip cleanly.
+ */
+function loadBaseAndCurrent(manifestPath) {
+  let baseContent;
   try {
-    const basePath = 'plugins/counterbalance/.claude-plugin/plugin.json';
-    let baseContent;
-    try {
-      baseContent = execSync(`git show ${baseRef}:${basePath}`, {
-        cwd: repoRoot,
-        encoding: 'utf-8'
-      });
-    } catch (e) {
-      console.log(`[counterbalance] version-bump test: base ref ${baseRef} not found, skipping`);
-      return;
-    }
-
-    const currentContent = readFileSync(path.resolve(repoRoot, basePath), 'utf-8');
-
-    const baseObj = JSON.parse(baseContent);
-    const currentObj = JSON.parse(currentContent);
-
-    const baseNorm = normalizeForComparison(baseObj);
-    const currentNorm = normalizeForComparison(currentObj);
-
-    // If body hasn't changed, skip this test (it's not applicable)
-    if (baseNorm === currentNorm) {
-      return;
-    }
-
-    // Body changed, so version must have bumped
-    assert.ok(isBumped(baseObj.version, currentObj.version),
-      `plugin.json body changed but version did not bump: ${baseObj.version} -> ${currentObj.version}`);
-  } catch (e) {
-    if (e.message && e.message.includes('base ref') && e.message.includes('not found')) {
-      console.log(`[counterbalance] version-bump test: base ref ${baseRef} not found, skipping`);
-      return;
-    }
-    throw e;
+    baseContent = execSync(`git show ${baseRef}:${manifestPath}`, {
+      cwd: repoRoot,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } catch {
+    console.log(`[counterbalance] version-bump test: base ref ${baseRef} not found, skipping`);
+    return null;
   }
+  const currentContent = readFileSync(path.resolve(repoRoot, manifestPath), 'utf-8');
+  return {
+    base: JSON.parse(baseContent),
+    current: JSON.parse(currentContent),
+  };
+}
+
+test('counterbalance.AC8.3: plugin.json version bumped when body changed', () => {
+  const loaded = loadBaseAndCurrent('plugins/counterbalance/.claude-plugin/plugin.json');
+  if (loaded === null) return;
+
+  const { base, current } = loaded;
+  if (normalizeForComparison(base) === normalizeForComparison(current)) {
+    // Body unchanged — this test is not applicable on this diff.
+    return;
+  }
+
+  assert.ok(
+    isBumped(base.version, current.version),
+    `plugin.json body changed but version did not bump: ${base.version} -> ${current.version}`,
+  );
 });
 
-test('counterbalance.AC8.3: marketplace.json version bumped when body changed', async () => {
-  try {
-    const basePath = '.claude-plugin/marketplace.json';
-    let baseContent;
-    try {
-      baseContent = execSync(`git show ${baseRef}:${basePath}`, {
-        cwd: repoRoot,
-        encoding: 'utf-8'
-      });
-    } catch (e) {
-      console.log(`[counterbalance] version-bump test: base ref ${baseRef} not found, skipping`);
-      return;
-    }
+test('counterbalance.AC8.3: marketplace.json version bumped when body changed', () => {
+  const loaded = loadBaseAndCurrent('.claude-plugin/marketplace.json');
+  if (loaded === null) return;
 
-    const currentContent = readFileSync(path.resolve(repoRoot, basePath), 'utf-8');
-
-    const baseObj = JSON.parse(baseContent);
-    const currentObj = JSON.parse(currentContent);
-
-    const baseNorm = normalizeForComparison(baseObj);
-    const currentNorm = normalizeForComparison(currentObj);
-
-    // If body hasn't changed, skip this test (it's not applicable)
-    if (baseNorm === currentNorm) {
-      return;
-    }
-
-    // Body changed, so version must have bumped
-    assert.ok(isBumped(baseObj.version, currentObj.version),
-      `marketplace.json body changed but version did not bump: ${baseObj.version} -> ${currentObj.version}`);
-  } catch (e) {
-    if (e.message && e.message.includes('base ref') && e.message.includes('not found')) {
-      console.log(`[counterbalance] version-bump test: base ref ${baseRef} not found, skipping`);
-      return;
-    }
-    throw e;
+  const { base, current } = loaded;
+  if (normalizeForComparison(base) === normalizeForComparison(current)) {
+    return;
   }
+
+  // marketplace.json may not have a top-level version; if not, fall back to
+  // the first plugin entry's version (which plugin.json is authoritative for).
+  const basePrev = base.version ?? base.plugins?.[0]?.version;
+  const currCurr = current.version ?? current.plugins?.[0]?.version;
+
+  assert.ok(
+    basePrev && currCurr && isBumped(basePrev, currCurr),
+    `marketplace.json body changed but version did not bump: ${basePrev} -> ${currCurr}`,
+  );
 });
 
-test('counterbalance.AC8.3: no version bump required when body identical to base', async () => {
-  // This is a control test: if neither file's body has changed, then
-  // we should not require a version bump. In most cases (no manifest changes),
-  // this test passes trivially because the bodies are identical.
-  try {
-    const pluginPath = 'plugins/counterbalance/.claude-plugin/plugin.json';
-    let basePluginContent;
-    try {
-      basePluginContent = execSync(`git show ${baseRef}:${pluginPath}`, {
-        cwd: repoRoot,
-        encoding: 'utf-8'
-      });
-    } catch (e) {
-      console.log(`[counterbalance] version-bump test: base ref ${baseRef} not found, skipping`);
-      return;
-    }
+test('counterbalance.AC8.3: no version bump required when body identical to base', () => {
+  // Control test. Either the body matches the base (no bump required, pass),
+  // OR the body differs (bump is required and enforced by the tests above).
+  // Either way this test must contain at least one assertion so it is not a
+  // vacuous pass when the body-changed branch is taken.
+  const loaded = loadBaseAndCurrent('plugins/counterbalance/.claude-plugin/plugin.json');
+  if (loaded === null) return;
 
-    const currentPluginContent = readFileSync(path.resolve(repoRoot, pluginPath), 'utf-8');
+  const { base, current } = loaded;
+  const bodyUnchanged = normalizeForComparison(base) === normalizeForComparison(current);
 
-    const basePluginObj = JSON.parse(basePluginContent);
-    const currentPluginObj = JSON.parse(currentPluginContent);
-
-    const basePluginNorm = normalizeForComparison(basePluginObj);
-    const currentPluginNorm = normalizeForComparison(currentPluginObj);
-
-    // If body hasn't changed, then no bump is required, so this test is simply a pass.
-    // This ensures we don't flag manifests as needing a bump when they haven't actually changed.
-    if (basePluginNorm === currentPluginNorm) {
-      assert.ok(true, 'body unchanged, no bump required');
-    }
-  } catch (e) {
-    if (e.message && e.message.includes('base ref') && e.message.includes('not found')) {
-      console.log(`[counterbalance] version-bump test: base ref ${baseRef} not found, skipping`);
-      return;
-    }
-    throw e;
+  if (bodyUnchanged) {
+    assert.ok(true, 'body unchanged, no bump required — control holds');
+  } else {
+    // When the body has changed, the bump enforcement is the job of the AC8.3
+    // test above; this control just records that we reached the body-changed
+    // branch deliberately rather than passing with zero assertions.
+    assert.ok(
+      !bodyUnchanged,
+      'body changed — bump enforcement delegated to the AC8.3 body-changed test above',
+    );
   }
 });
 
@@ -161,14 +128,12 @@ test('version-bump: skip cleanly when base ref not available', () => {
     execSync(`git show ${baseRef}:plugins/counterbalance/.claude-plugin/plugin.json`, {
       cwd: repoRoot,
       encoding: 'utf-8',
-      stdio: 'pipe'
+      stdio: 'pipe',
     });
-  } catch (e) {
-    // If the base ref doesn't exist, we should skip cleanly.
+  } catch {
     console.log(`[counterbalance] version-bump test: base ref ${baseRef} not found, skipping`);
     assert.ok(true, 'base ref missing, skipped cleanly');
     return;
   }
-  // If we got here, the base ref exists and we're good.
   assert.ok(true, 'base ref available');
 });

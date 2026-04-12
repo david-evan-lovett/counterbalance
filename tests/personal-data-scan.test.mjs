@@ -120,12 +120,9 @@ test('counterbalance.AC8.4: personal data scan reliably detects a known injected
       deny: [testString]
     };
 
-    const skipPatterns = ['node_modules', '.git', '.scratch/temp-data-scan-test', 'tests/personal-data-'];
-
-    // Walk the temp directory
-    const files = await walkFiles(tempDir, skipPatterns);
-
-    // For this test, we specifically want to scan the test file, so we override the skip
+    // Scan only the temp file we just wrote — using walkFiles here would be
+    // a weaker test (we'd still be detecting the injected string, just through
+    // an extra directory walk that's already exercised by the main AC8.4 test).
     const testFiles = [tempFile];
 
     const violations = [];
