@@ -1,5 +1,10 @@
 {
-    "presets": {},
+    "presets": {
+        "quick":      ["readability", "opener-check", "cliche-check"],
+        "voice":      ["voice-check", "cliche-check", "opener-check", "cut-check", "concrete-check"],
+        "mechanical": ["readability", "repetition-check", "spread-check", "passive-check"],
+        "full":       ["*"]
+    },
     "reviewers": [
         {
             "id": "voice-check",

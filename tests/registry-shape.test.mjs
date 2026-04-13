@@ -36,6 +36,24 @@ test('prose-review-suite.AC2.2: presets is an object (may be empty until Phase 6
     );
 });
 
+test('prose-review-suite.AC2.2: four named presets exist with valid reviewer ids', async () => {
+    const registry = await loadRegistry(pluginRoot);
+    const names = ['quick', 'voice', 'mechanical', 'full'];
+    for (const name of names) {
+        assert.ok(name in registry.presets, `preset "${name}" must exist`);
+        assert.ok(Array.isArray(registry.presets[name]), `preset "${name}" must be an array`);
+    }
+    const ids = new Set(registry.reviewers.map(r => r.id));
+    for (const name of names) {
+        for (const id of registry.presets[name]) {
+            if (id === '*') continue;
+            assert.ok(ids.has(id), `preset "${name}" references unknown reviewer id: ${id}`);
+        }
+    }
+    // full preset uses the wildcard
+    assert.deepStrictEqual(registry.presets.full, ['*']);
+});
+
 test('loadRegistry rejects a registry with non-object presets', async (t) => {
     const tempDir = await mkdtemp(join(os.tmpdir(), 'cbal-test-'));
 
