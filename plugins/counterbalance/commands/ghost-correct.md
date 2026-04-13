@@ -95,13 +95,18 @@ In the Task prompt body, make the correction-pass intent explicit:
 
 Capture the subagent's full response text.
 
-## Step 9: Write the corrected draft and relay output
+## Step 9: Split the response, write only the corrected draft, relay the full response
 
-Write the subagent's response to `<draft-path>` using the Write tool — this overwrites the pre-correction draft. The `.bak` file from Step 7 remains available as the single-level undo.
+The subagent's response has two parts: the corrected draft (always present) and a `### Voice guide proposals` section (optional — emitted only when correction deltas surface a pattern worth adding to the voice guide). Only the draft portion belongs in the draft file. The proposals are conversational feedback for the user and must stay out of the persisted draft.
 
-Print three things to the user in this order:
+Split the response on the literal heading `### Voice guide proposals`:
 
-1. **The subagent's response**, unchanged.
+- **Everything before the heading** (or the full response, if the heading is absent) is the corrected draft. Trim trailing whitespace and write it to `<draft-path>` using the Write tool — this overwrites the pre-correction draft. The `.bak` file from Step 7 remains available as the single-level undo.
+- **The heading and everything after it** stays in the relay only. Do not write it to the draft file.
+
+Then print three things to the user in this order:
+
+1. **The subagent's full response**, unchanged — both the corrected draft and the proposals section if any. The user should see the voice-guide proposals in chat so they can decide whether to fold them into the profile themselves.
 2. **The "corrected draft written" footer**: "Corrected draft written to `<draft-path>`. Previous version saved to `<bak-path>` — this is a single-level undo. For deeper history, commit your drafts to git."
 3. **The profile source footer** based on the `source` field of the Step 6 profile JSON:
     - `local` → "Applied using your local override (`.counterbalance.md`)."

@@ -146,3 +146,19 @@ test('ghost-correct command: reports the draft path and backup path in the final
   assert.ok(body.toLowerCase().includes('corrected draft written'),
     'body must print a "Corrected draft written" footer');
 });
+
+test('ghost-correct command: splits response at "Voice guide proposals" heading before writing', async () => {
+  const content = await readFile(commandPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('### Voice guide proposals'),
+    'body must name the literal "### Voice guide proposals" heading as the split point');
+  assert.ok(body.toLowerCase().includes('split'),
+    'body must describe splitting the response before writing the draft');
+  assert.ok(
+    body.toLowerCase().includes('only the draft portion')
+      || body.toLowerCase().includes('only the corrected draft')
+      || body.toLowerCase().includes('draft portion'),
+    'body must make clear that only the draft portion is written to disk',
+  );
+});
