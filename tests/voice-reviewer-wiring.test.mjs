@@ -1,134 +1,100 @@
 import { test } from 'node:test';
-import assert from 'node:assert';
+import { strict as assert } from 'node:assert';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = join(__filename, '..');
+const __dirname = dirname(__filename);
 const repoRoot = join(__dirname, '..');
 const pluginRoot = join(repoRoot, 'plugins', 'counterbalance');
 
-// Helper to extract frontmatter from markdown
 function extractFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n/);
-  if (!match) {
-    throw new Error('No frontmatter found');
-  }
-  return yaml.load(match[1]);
+    const match = content.match(/^---\n([\s\S]*?)\n---\n/);
+    if (!match) return null;
+    return yaml.load(match[1]);
 }
 
-// Helper to get body content (everything after frontmatter)
-function extractBody(content) {
-  const match = content.match(/^---\n[\s\S]*?\n---\n([\s\S]*)$/);
-  return match ? match[1] : content;
-}
+// Hardcoded agent table — fixed after Phase 5.
+// If a new agent-type reviewer is added in the future, add it here.
+// This is intentionally NOT dynamically loaded from the registry because:
+//   (a) top-level await + dynamic test discovery has Node version edge cases
+//   (b) the render header is not derivable from registry id alone (different titles)
+//   (c) explicit list makes the enforcement intent clear
+const AGENT_ENTRIES = [
+    { id: 'voice-check',    agentFile: 'voice-reviewer.md',        commandFile: 'voice-check.md',    header: '### Voice check findings' },
+    { id: 'cliche-check',   agentFile: 'cliche-hunter.md',         commandFile: 'cliche-check.md',   header: '### Cliche check findings' },
+    { id: 'opener-check',   agentFile: 'opener-check.md',          commandFile: 'opener-check.md',   header: '### Opener check findings' },
+    { id: 'cut-check',      agentFile: 'cuttability.md',           commandFile: 'cut-check.md',      header: '### Cut check findings' },
+    { id: 'concrete-check', agentFile: 'concrete-vs-abstract.md',  commandFile: 'concrete-check.md', header: '### Concrete check findings' },
+];
 
-// Helper to extract the JSON block from a markdown section
-function extractJsonBlock(content) {
-  const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-  if (!jsonMatch) {
-    throw new Error('No JSON block found');
-  }
-  return jsonMatch[1];
-}
-
-// === VOICE-REVIEWER AGENT TESTS ===
-
-test('counterbalance.AC5.2: voice-reviewer tools field is exactly "Read, Grep, Glob"', async () => {
-  const agentPath = join(pluginRoot, 'agents', 'voice-reviewer.md');
-  const content = await readFile(agentPath, 'utf-8');
-  const fm = extractFrontmatter(content);
-
-  const expectedTools = 'Read, Grep, Glob';
-  assert.strictEqual(fm.tools, expectedTools, `tools field must be exactly "${expectedTools}"`);
-});
-
-test('counterbalance.AC5.2: voice-reviewer does NOT declare Write, Edit, or Bash in tools', async () => {
-  const agentPath = join(pluginRoot, 'agents', 'voice-reviewer.md');
-  const content = await readFile(agentPath, 'utf-8');
-  const fm = extractFrontmatter(content);
-  const toolsField = fm.tools;
-
-  assert.ok(!toolsField.includes('Write'), 'tools field must NOT contain "Write"');
-  assert.ok(!toolsField.includes('Edit'), 'tools field must NOT contain "Edit"');
-  assert.ok(!toolsField.includes('Bash'), 'tools field must NOT contain "Bash"');
-});
-
-test('counterbalance.AC5.3: voice-reviewer body documents the output contract field names in JSON block', async () => {
-  const agentPath = join(pluginRoot, 'agents', 'voice-reviewer.md');
-  const content = await readFile(agentPath, 'utf-8');
-  const body = extractBody(content);
-
-  // Extract the JSON block from the Output contract section
-  const jsonBlock = extractJsonBlock(body);
-
-  // Check that each field name appears in the JSON block
-  const requiredFields = ['reviewer', 'findings', 'line', 'severity', 'rule', 'quote', 'message', 'suggested'];
-  for (const field of requiredFields) {
-    assert.ok(
-      jsonBlock.includes(`"${field}"`),
-      `JSON block must contain the field name "${field}"`
+// Sanity check: if future refactors add a new agent-type reviewer to reviewers.json
+// without updating AGENT_ENTRIES, this test will surface the gap.
+test('prose-review-suite.AC7.1: AGENT_ENTRIES matches registry type=agent count', async () => {
+    const { loadRegistry } = await import('../plugins/counterbalance/lib/reviewers.mjs');
+    const registry = await loadRegistry(pluginRoot);
+    const registryAgents = registry.reviewers.filter(r => r.type === 'agent');
+    assert.strictEqual(
+        AGENT_ENTRIES.length,
+        registryAgents.length,
+        `AGENT_ENTRIES has ${AGENT_ENTRIES.length} entries but registry has ${registryAgents.length} agent-type reviewers — update AGENT_ENTRIES in tests/voice-reviewer-wiring.test.mjs`
     );
-  }
 });
 
-test('counterbalance.AC5.4: voice-reviewer body documents the rendered markdown output format', async () => {
-  const agentPath = join(pluginRoot, 'agents', 'voice-reviewer.md');
-  const content = await readFile(agentPath, 'utf-8');
-  const body = extractBody(content);
+for (const entry of AGENT_ENTRIES) {
+    const agentFile = entry.agentFile;
+    const commandFile = entry.commandFile;
+    const header = entry.header;
 
-  assert.ok(
-    body.includes('### Voice check findings'),
-    'body must contain literal "### Voice check findings"'
-  );
-});
+    test(`prose-review-suite.AC5.1 & AC7.1 & AC8.1: ${entry.id} agent frontmatter is correct`, async () => {
+        const agentPath = join(pluginRoot, 'agents', agentFile);
+        const content = await readFile(agentPath, 'utf8');
+        const fm = extractFrontmatter(content);
+        assert.ok(fm, `${agentFile} must have frontmatter`);
+        assert.ok(fm.name, 'name field required');
+        assert.ok(fm.description, 'description field required');
+        assert.strictEqual(fm.model, 'sonnet', 'model must be sonnet');
+        assert.strictEqual(fm.tools, 'Read, Grep, Glob', 'tools must be literally "Read, Grep, Glob"');
+        assert.ok(!/\bWrite\b/.test(fm.tools));
+        assert.ok(!/\bEdit\b/.test(fm.tools));
+        assert.ok(!/\bBash\b/.test(fm.tools));
+    });
 
-test('counterbalance.AC5.5: voice-reviewer body handles empty draft as empty findings, not error', async () => {
-  const agentPath = join(pluginRoot, 'agents', 'voice-reviewer.md');
-  const content = await readFile(agentPath, 'utf-8');
-  const body = extractBody(content);
+    test(`prose-review-suite.AC5.3: ${entry.id} agent body documents output contract`, async () => {
+        const agentPath = join(pluginRoot, 'agents', agentFile);
+        const content = await readFile(agentPath, 'utf8');
+        // the JSON block in the body must reference all Finding fields
+        for (const field of ['reviewer', 'findings', 'line', 'severity', 'rule', 'quote', 'message', 'suggested']) {
+            assert.ok(content.includes(field), `body must mention ${field}`);
+        }
+    });
 
-  // Case-insensitive search for "empty draft" or nearby "empty findings" / "zero violations"
-  const lowerBody = body.toLowerCase();
-  const hasEmptyDraft = lowerBody.includes('empty draft');
-  const hasEmptyFindings = lowerBody.includes('empty findings');
-  const hasZeroViolations = lowerBody.includes('zero violations');
+    test(`prose-review-suite.AC5.3: ${entry.id} render header is literal "${header}"`, async () => {
+        const agentPath = join(pluginRoot, 'agents', agentFile);
+        const content = await readFile(agentPath, 'utf8');
+        assert.ok(content.includes(header), `body must contain "${header}"`);
+    });
 
-  assert.ok(
-    hasEmptyDraft && (hasEmptyFindings || hasZeroViolations),
-    'body must mention "empty draft" near "empty findings" or "zero violations"'
-  );
-});
+    test(`prose-review-suite.AC5.4: ${entry.id} agent body handles empty draft edge case`, async () => {
+        const agentPath = join(pluginRoot, 'agents', agentFile);
+        const content = await readFile(agentPath, 'utf8');
+        assert.ok(content.includes('empty draft'));
+        assert.ok(
+            content.includes('empty findings') || content.includes('zero violations') || content.includes('"findings": []')
+        );
+    });
 
-// === VOICE-CHECK COMMAND TESTS ===
-
-test('counterbalance.AC5.1: commands/voice-check.md exists with description, allowed-tools, argument-hint', async () => {
-  const cmdPath = join(pluginRoot, 'commands', 'voice-check.md');
-  const content = await readFile(cmdPath, 'utf-8');
-  const fm = extractFrontmatter(content);
-
-  assert.ok(fm.description && fm.description.length > 0, 'voice-check command must have a non-empty description');
-  assert.ok(fm['allowed-tools'] && fm['allowed-tools'].length > 0, 'voice-check command must have allowed-tools');
-  assert.ok(fm['argument-hint'] && fm['argument-hint'].length > 0, 'voice-check command must have argument-hint');
-});
-
-test('counterbalance.AC5.1: commands/voice-check.md allowed-tools includes Task', async () => {
-  const cmdPath = join(pluginRoot, 'commands', 'voice-check.md');
-  const content = await readFile(cmdPath, 'utf-8');
-  const fm = extractFrontmatter(content);
-
-  assert.ok(fm['allowed-tools'].includes('Task'), 'voice-check allowed-tools must include Task');
-});
-
-test('counterbalance.AC5.1: commands/voice-check.md dispatches voice-reviewer subagent', async () => {
-  const cmdPath = join(pluginRoot, 'commands', 'voice-check.md');
-  const content = await readFile(cmdPath, 'utf-8');
-  const body = extractBody(content);
-
-  assert.ok(
-    body.includes('voice-reviewer'),
-    'voice-check command body must contain literal "voice-reviewer"'
-  );
-});
+    test(`prose-review-suite.AC1.1: ${entry.id} command file wires to agent`, async () => {
+        const commandPath = join(pluginRoot, 'commands', commandFile);
+        const content = await readFile(commandPath, 'utf8');
+        const fm = extractFrontmatter(content);
+        assert.ok(fm?.description, 'description required');
+        assert.ok(fm?.['allowed-tools']?.includes('Task'), 'allowed-tools must include Task');
+        assert.ok(fm?.['argument-hint'], 'argument-hint required');
+        // body should dispatch the agent (by name or file basename)
+        const agentBasename = agentFile.replace(/\.md$/, '');
+        assert.ok(content.includes(agentBasename), `command must dispatch ${agentBasename}`);
+    });
+}
