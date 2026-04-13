@@ -126,10 +126,10 @@ test('counterbalance.AC6.3: registry enumeration picks up the stub reviewer with
   const loadedRegistry = await loadRegistry(tempPluginRoot);
   const applicableList = applicableReviewers(loadedRegistry, 'foo.md');
 
-  assert.strictEqual(applicableList.length, 2, 'registry enumeration should return 2 reviewers for foo.md');
+  assert.strictEqual(applicableList.length, 6, 'registry enumeration should return 6 reviewers for foo.md (5 baseline + 1 stub)');
 });
 
-test('counterbalance.AC6.3: the added stub reviewer is the second-listed one in the registry', async (t) => {
+test('counterbalance.AC6.3: the added stub reviewer is in the registry', async (t) => {
   const tmpDir = await mkdtempAsync(join(tmpdir(), 'cbal-test-'));
 
   t.after(async () => {
@@ -144,5 +144,5 @@ test('counterbalance.AC6.3: the added stub reviewer is the second-listed one in 
   const applicableList = applicableReviewers(loadedRegistry, 'foo.md');
 
   assert.strictEqual(applicableList[0].id, 'voice-check', 'first reviewer should be voice-check');
-  assert.strictEqual(applicableList[1].id, 'stub-check', 'second reviewer should be stub-check');
+  assert.ok(applicableList.some(r => r.id === 'stub-check'), 'stub-check should be in the applicable reviewers list');
 });

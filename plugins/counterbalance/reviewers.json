@@ -11,6 +11,50 @@
                 "**/*.mdx"
             ],
             "description": "Checks a draft against the active voice profile and flags violations as line-referenced findings."
+        },
+        {
+            "id": "readability",
+            "type": "lib",
+            "lib": "readability.mjs",
+            "command": "/counterbalance:readability",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Flesch-Kincaid grade-level check. Flags drafts outside the 9–13 band."
+        },
+        {
+            "id": "repetition-check",
+            "type": "lib",
+            "lib": "repetition.mjs",
+            "command": "/counterbalance:repetition-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Flags non-stopword overuse within any 5-sentence sliding window."
+        },
+        {
+            "id": "spread-check",
+            "type": "lib",
+            "lib": "spread.mjs",
+            "command": "/counterbalance:spread-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Flags runs of 4+ consecutive sentences in the same length bucket."
+        },
+        {
+            "id": "passive-check",
+            "type": "lib",
+            "lib": "passive.mjs",
+            "command": "/counterbalance:passive-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Passive-voice heuristic via to-be verb + past participle matching."
         }
     ]
 }

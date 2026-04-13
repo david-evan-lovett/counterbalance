@@ -92,6 +92,6 @@ test('partitionByType splits the real registry correctly', async (t) => {
     const registry = await loadRegistry(pluginRoot);
     const { agents, libs } = partitionByType(registry.reviewers);
 
-    assert.strictEqual(agents.length, 1, 'should have exactly 1 agent reviewer (voice-check)');
-    assert.strictEqual(libs.length, 0, 'should have 0 lib reviewers (Phase 5 and Phase 3 will add more)');
+    assert.strictEqual(agents.length, 1, 'one agent (voice-check)');
+    assert.strictEqual(libs.length, 4, 'four lib reviewers (readability, repetition-check, spread-check, passive-check)');
 });
