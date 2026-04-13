@@ -27,8 +27,9 @@ while ((match = referenceRegex.exec(skillContent)) !== null) {
 }
 
 test('counterbalance.AC7.4: every references/*.md mentioned in SKILL.md exists on disk', async () => {
-  assert.ok(mentionedFilenames.size > 0, 'SKILL.md should mention at least one reference file');
-
+  // SKILL.md may mention zero reference files — the drafter skill no longer
+  // cites fallback-voice.md after the four-layer resolver + bounce replaced it.
+  // The test's purpose is to catch broken links, not to require references.
   for (const filename of mentionedFilenames) {
     const filePath = path.resolve(referencesDir, filename);
     try {

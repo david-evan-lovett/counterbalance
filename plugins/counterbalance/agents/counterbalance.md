@@ -26,18 +26,22 @@ Before doing anything in either mode, resolve the active voice profile:
 node "${CLAUDE_PLUGIN_ROOT}/lib/resolver.mjs" --cwd="$PWD" --json
 ```
 
-The resolver prints JSON for a matched profile or the literal string `null`. Three layers, first-match-wins:
+The resolver prints JSON for a matched profile or the literal string `null`. Four layers, first-match-wins:
 
 1. `./.counterbalance.md` (local override)
 2. `./.claude/counterbalance.md` (project voice)
 3. `$HOME/.claude/plugins/data/counterbalance/profiles/default.md` (user voice)
+4. A voice-section extraction from `$HOME/.claude/CLAUDE.md` (last-ditch convenience)
 
-### When the resolver returns null
+Any of the first three layers overrides layer 4 — a configured profile always beats the CLAUDE.md fallback. Layer 4 returns a profile whose `source` field is `claude-md` and whose body is the extracted section verbatim.
 
-Try Voice Discovery mode first — but only if the caller didn't explicitly ask for Drafting. If the caller asked for Drafting and no profile resolves:
+### When the resolver returns null in Drafting mode
 
-1. Attempt CLAUDE.md pre-flight (below). If it succeeds, re-run the resolver.
-2. If CLAUDE.md pre-flight finds nothing or the user declines, load `${CLAUDE_PLUGIN_ROOT}/skills/counterbalance/references/fallback-voice.md` as the active voice guide for this session and proceed. Never draft with no voice guidance at all.
+The `/ghost` command bounces before ever dispatching you, so under normal conditions you will never see a null `resolved_profile` in Drafting mode. If you do see one anyway (direct invocation, bug, whatever), do not draft. Return immediately with: "No voice profile resolved. Run `/voice-refresh` to set one up." There is no generic fallback voice — a tool that drafts without a voice guide is a tool producing AI slop, and this plugin exists to prevent that.
+
+### When the resolver returns null in Voice Discovery mode
+
+Voice Discovery is designed to handle the empty case. Proceed to the CLAUDE.md pre-flight migration (below), then sample gathering if that yields nothing.
 
 ## Voice Discovery mode
 
@@ -181,4 +185,4 @@ Parse rules:
 
 ## Fallback behavior
 
-If the resolved voice profile is null AND CLAUDE.md pre-flight produced nothing AND the user declined or skipped import, use `${CLAUDE_PLUGIN_ROOT}/skills/counterbalance/references/fallback-voice.md`. Read it, treat it as the active voice guide, and proceed with drafting. Cite the fallback in your final report so the user knows you didn't use a real profile.
+There is no generic fallback voice guide. If the four-layer resolver cascade produces nothing, the `/ghost` command bounces the user toward `/voice-refresh` before you are ever dispatched. If you somehow receive a null `resolved_profile` in Drafting mode anyway, return immediately with: "No voice profile resolved. Run `/voice-refresh` to set one up." Do not draft with made-up defaults — a tool that drafts without a voice guide is producing the exact AI slop this plugin exists to prevent.
