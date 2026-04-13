@@ -126,7 +126,7 @@ test('counterbalance.AC6.3: registry enumeration picks up the stub reviewer with
   const loadedRegistry = await loadRegistry(tempPluginRoot);
   const applicableList = applicableReviewers(loadedRegistry, 'foo.md');
 
-  assert.strictEqual(applicableList.length, 6, 'registry enumeration should return 6 reviewers for foo.md (5 baseline + 1 stub)');
+  assert.strictEqual(applicableList.length, 10, 'registry enumeration should return 10 reviewers for foo.md (9 baseline + 1 stub)');
 });
 
 test('counterbalance.AC6.3: the added stub reviewer is in the registry', async (t) => {

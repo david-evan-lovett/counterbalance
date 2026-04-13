@@ -55,6 +55,50 @@
                 "**/*.mdx"
             ],
             "description": "Passive-voice heuristic via to-be verb + past participle matching."
+        },
+        {
+            "id": "cliche-check",
+            "type": "agent",
+            "agent": "counterbalance:cliche-hunter",
+            "command": "/counterbalance:cliche-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Scans a draft for cliches — AI-slop phrases, stock metaphors, oily cadence, extended metaphors."
+        },
+        {
+            "id": "opener-check",
+            "type": "agent",
+            "agent": "counterbalance:opener-check",
+            "command": "/counterbalance:opener-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Scans a draft for forbidden opener patterns (hedges, \"but it was\", \"not X but Y\", fillers)."
+        },
+        {
+            "id": "cut-check",
+            "type": "agent",
+            "agent": "counterbalance:cuttability",
+            "command": "/counterbalance:cut-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Scans a draft for cuttable content — filler adverbs, redundant clauses, setup sentences."
+        },
+        {
+            "id": "concrete-check",
+            "type": "agent",
+            "agent": "counterbalance:concrete-vs-abstract",
+            "command": "/counterbalance:concrete-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Scans a draft for evaluations without evidence and abstract scenes that should be concrete."
         }
     ]
 }
