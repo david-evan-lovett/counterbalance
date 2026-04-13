@@ -60,7 +60,7 @@ If `findings` is non-empty, print:
 Iterate findings and render each as:
 
 ```markdown
-**Line <line>** — `note` — _repetition-within-window_
+**Line <line>** — `note` — _passive-voice_
 
 > <quote>
 
