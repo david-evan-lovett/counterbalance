@@ -15,21 +15,27 @@ When the plugin manifest changes but the version stays the same, your installed 
 
 ## Commands
 
-- `/ghost [notes-file-or-text]` — draft prose in your voice from notes, dictation, or rough bullets. Dispatches the counterbalance subagent in Drafting Loop mode.
+- `/ghost [notes-file-or-text]` — draft prose in your voice from notes, dictation, or rough bullets. Writes the draft to a file (with a sidecar metadata record) so you can iterate on it with `/ghost-correct`. Dispatches the counterbalance subagent in Drafting Loop mode.
+- `/ghost-correct <draft-file>` — apply user corrections back through the drafter. Edit your draft file in place, add `<-` markers on lines you want changed (syntax: `original text <- replacement text`), then run this command. It parses the markers, confirms the list with you, dispatches the subagent to rewrite the draft, and saves the prior version as a single-level `.bak` undo. Deeper history requires committing drafts to git.
 - `/voice-refresh` — run Voice Discovery against the active profile. First-run does the CLAUDE.md pre-flight migration; subsequent runs gather fresh samples and synthesize a new profile.
 - `/voice-check [draft-file-or-text]` — review a draft against the active voice profile. Read-only. Returns a line-referenced findings list.
 
 ## Voice profiles
 
-The resolver walks three layers in descending precedence and returns the first one that parses cleanly.
+The resolver walks four layers in descending precedence and returns the first one that parses cleanly.
 
 | You want… | Edit this file |
 |---|---|
 | A one-off voice for a specific repo | `./.counterbalance.md` (gitignored by default) |
 | A shared voice for a project your team works on | `./.claude/counterbalance.md` (committed) |
 | Your personal default voice | `~/.claude/plugins/data/counterbalance/profiles/default.md` |
+| _Last-ditch_ — a voice section inside `~/.claude/CLAUDE.md` | Heading matching `/voice\|writing\|tone\|style\|register\|sentence/i` |
 
-The file is plain markdown. Frontmatter is optional — if you don't have any, the whole file is the voice guide. If you do, the parser loads it and the body below becomes the guide text.
+The first three are plain markdown. Frontmatter is optional — if you don't have any, the whole file is the voice guide. If you do, the parser loads it and the body below becomes the guide text.
+
+The fourth layer is a convenience: if you already keep a voice section in your global CLAUDE.md, the resolver will extract it so `/ghost` works out of the box. Any of the first three layers overrides it, and running `/voice-refresh` walks you through migrating that section into a real profile file.
+
+If all four layers miss, `/ghost` and `/voice-check` bounce you toward `/voice-refresh`. There is no generic fallback voice — a tool that drafts without a voice guide is producing the exact AI slop this plugin exists to prevent.
 
 The resolver also ships as a CLI you can shell out to from your own scripts:
 

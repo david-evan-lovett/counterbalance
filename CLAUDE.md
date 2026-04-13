@@ -1,6 +1,6 @@
 # counterbalance
 
-Last verified: 2026-04-12
+Last verified: 2026-04-13
 
 A Claude Code plugin that drafts prose in the user's voice and reviews prose against that voice via a multi-reviewer pipeline. The drafter walks notes through an intake-analysis-correction loop. Reviewers are read-only critics that return line-referenced findings; `/prose-review` is a meta-command that dispatches a selected subset of reviewers in parallel and merges the output. The reviewer slot is designed as an extension point — adding a new reviewer is a three-file, zero-touch procedure for both agent-type and lib-type reviewers.
 
@@ -42,7 +42,8 @@ plugins/counterbalance/
 │   ├── cuttability.md                # filler / redundancy critic (Sonnet)
 │   └── concrete-vs-abstract.md       # evidence-vs-evaluation critic (Sonnet)
 ├── commands/
-│   ├── ghost.md                      # /ghost — dispatches counterbalance in Drafting Loop
+│   ├── ghost.md                      # /ghost — drafts prose to a file with sidecar metadata
+│   ├── ghost-correct.md              # /ghost-correct — applies <- corrections to a draft in place
 │   ├── voice-refresh.md              # /voice-refresh — dispatches Voice Discovery
 │   ├── prose-review.md               # /prose-review — meta-command, orchestrates parallel review
 │   ├── voice-check.md                # /voice-check — single agent reviewer
@@ -55,10 +56,13 @@ plugins/counterbalance/
 │   ├── spread-check.md               # /spread-check — single lib reviewer
 │   └── passive-check.md              # /passive-check — single lib reviewer
 ├── lib/
-│   ├── resolver.mjs                  # 3-layer voice profile resolver + CLI entry
+│   ├── resolver.mjs                  # 4-layer voice profile resolver + CLI entry
 │   ├── parser.mjs                    # voice profile frontmatter/body parser
+│   ├── claude-md-parser.mjs          # layer-4 parser: extracts a voice section from CLAUDE.md
 │   ├── cascade.mjs                   # layer-walking helper (first match wins)
 │   ├── windows-path.mjs              # forward-slash normalization for glob matching
+│   ├── drafts-dir.mjs                # 3-layer drafts directory resolver + CLI entry
+│   ├── correction-parser.mjs         # parses <- markers out of a draft (strips code fences) + CLI
 │   ├── reviewers.mjs                 # registry loader, applicability, expandPreset, partitionByType, aggregateFindings
 │   ├── md-preprocess.mjs             # stripMarkdown — shared preprocessor for lib reviewers
 │   ├── stopwords.mjs                 # STOPWORDS set + isStopword
@@ -77,7 +81,7 @@ plugins/counterbalance/
 │   └── prose-review/
 │       └── SKILL.md                  # orchestration skill for /prose-review
 └── package.json                      # pins engines floor + lib-reviewer deps (NOT plugin version)
-tests/                                # 25 test files, 217 tests
+tests/                                # 28 test files, 295 tests
 docs/
 ├── design-plans/2026-04-11-counterbalance.md
 └── implementation-plans/2026-04-11-counterbalance/  # phase_01..phase_08
@@ -85,13 +89,26 @@ docs/
 
 ## Architectural Contracts
 
-**Voice profile resolver (`lib/resolver.mjs`) walks three layers in descending precedence:**
+**Voice profile resolver (`lib/resolver.mjs`) walks four layers in descending precedence:**
 
 1. `./.counterbalance.md` (local override, gitignored by default)
 2. `./.claude/counterbalance.md` (project-shared, committed)
 3. `~/.claude/plugins/data/counterbalance/profiles/default.md` (user default)
+4. A voice-section extraction from `~/.claude/CLAUDE.md` via `lib/claude-md-parser.mjs` — last-ditch convenience for users who already keep a voice section in their global CLAUDE.md
 
-First layer that parses cleanly wins. `resolveVoice(cwd)` returns `VoiceProfile | null`. The CLI form `node lib/resolver.mjs --cwd=$PWD --json` prints the profile as JSON or the literal string `null`, and is fail-open: any internal error exits 0 with `null` on stdout.
+First layer that parses cleanly wins. `resolveVoice(cwd)` returns `VoiceProfile | null`. When layer 4 fires, the returned profile has `source: "claude-md"` and its body is the extracted section verbatim (including the matched heading line). Layer 4 is terminated by the next heading of equal-or-higher level. The CLI form `node lib/resolver.mjs --cwd=$PWD --json` prints the profile as JSON or the literal string `null`, and is fail-open: any internal error exits 0 with `null` on stdout.
+
+**Null resolution is a bounce, not a fallback.** If all four layers miss, `/ghost` and `/voice-check` refuse to dispatch and point the user at `/voice-refresh`. There is no generic fallback voice — `references/fallback-voice.md` was deleted along with the old "silent fallback" pattern. The voice-reviewer agent handles null as a structured `{findings: [], error: ...}` payload so `/prose-review` can still run a multi-reviewer batch and surface the error in its errors section.
+
+**Drafts directory resolver (`lib/drafts-dir.mjs`) walks three layers:**
+
+1. `--out=<path>` (explicit flag, resolved against cwd if relative)
+2. A `drafts` directory in the current working directory, if it exists (existence is the opt-in signal — no config needed)
+3. `<home>/.claude/plugins/data/counterbalance/drafts/<cwd-basename>` (user-level default, auto-created on first use)
+
+`resolveDraftsDir({cwd, outFlag})` returns an absolute path. Basename collisions in layer 3 are accepted (no git-remote or full-path fingerprinting) — the rare case where two repos share a basename is solved by passing `--out=`. The CLI form `node lib/drafts-dir.mjs --cwd=$PWD [--out=<path>]` prints the resolved absolute path. Unlike the voice resolver, drafts-dir exits non-zero on failure — there is no useful "null" state when you need a real directory to write to.
+
+**Correction parser (`lib/correction-parser.mjs`)** extracts `<-` markers out of a draft file for `/ghost-correct`. Parses lines outside fenced code blocks and inline backtick spans, returns `{line, original, replacement}[]` with 1-indexed line numbers. Lines where either side of the arrow trims to empty are dropped (starts-with-`<-` is a general note per the drafter SKILL.md, ends-with-`<-` is a typo). The module ships as both ESM and a CLI: `node lib/correction-parser.mjs --file=<draft-path>` prints the parsed JSON array.
 
 **Voice profile shape:** `{ id, path, frontmatter, body, source }`. Frontmatter is optional — a file with no frontmatter is treated as a pure body. Frontmatter must be a YAML mapping (not a scalar or array) or the file is skipped with a warning.
 

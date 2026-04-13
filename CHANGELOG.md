@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **CLAUDE.md as voice profile layer 4.** The resolver cascade now walks four layers: local override, project, user, and finally a voice-section extraction from `~/.claude/CLAUDE.md`. Any of the first three layers overrides it. New `lib/claude-md-parser.mjs` handles the extraction via heading regex (`/voice|writing|tone|style|register|sentence/i`), capturing the matched heading through to the next heading of equal-or-higher level.
+- **Bounce-on-null for `/ghost` and `/voice-check`.** If the resolver returns `null` after all four layers, both commands refuse to dispatch and tell the user to run `/voice-refresh`. There is no longer a generic fallback voice — `references/fallback-voice.md` has been deleted. The voice-reviewer agent returns a structured `{findings: [], error: ...}` payload when `voiceProfile` is null so `/prose-review` can still run and surface the error in its errors section.
+- **File-based drafts.** `/ghost` now resolves a drafts directory via the new `lib/drafts-dir.mjs` (three-layer cascade: explicit `--out=` → local drafts directory if it exists → per-project subdirectory under `~/.claude/plugins/data/counterbalance/drafts/`), then persists the subagent's output to a file with a sidecar `.meta.json` capturing voice profile source, input path, cwd, and timestamp. Draft filenames mirror the input (`IDEAS.md` → `IDEAS.draft.md`) or use a compact ISO timestamp for inline text. Collisions append a numeric suffix.
+- **`/ghost-correct` command.** Closes the drafting loop. Edit your draft file in place, add `<-` markers on lines you want changed, then run `/ghost-correct <draft-file>`. The command parses markers via the new `lib/correction-parser.mjs` (which strips fenced code blocks and inline backtick spans to avoid false positives), confirms the parsed list via `AskUserQuestion`, re-resolves the voice profile fresh, saves the pre-correction draft as a `.bak` (single-level undo — deeper history requires git), and dispatches the drafter with a correction-pass context to rewrite the file. The corrected draft is written back to the same path.
+
+### Changed
+
+- **Voice profile resolver cascade grew a fourth layer** (`~/.claude/CLAUDE.md` voice section). Documented in the drafter `SKILL.md`, the drafter agent md, and the README voice-profile table.
+
+### Removed
+
+- **`references/fallback-voice.md`** and all references to it. The four-layer resolver plus the bounce-on-null behavior replaced the generic fallback pattern.
+
 ## [0.2.0] - 2026-04-12
 
 ### Added
