@@ -1,7 +1,9 @@
 {
+    "presets": {},
     "reviewers": [
         {
             "id": "voice-check",
+            "type": "agent",
             "agent": "counterbalance:voice-reviewer",
             "command": "/counterbalance:voice-check",
             "applies_to": [
