@@ -173,6 +173,21 @@ test('counterbalance.AC4.6: agent body says pre-flight is a silent no-op when CL
   );
 });
 
+test('drafter agent: body documents the correction-phase dispatch contract', async () => {
+  const agentPath = join(pluginRoot, 'agents', 'counterbalance.md');
+  const content = await readFile(agentPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('phase: "correction"') || body.includes("phase: 'correction'"),
+    'agent body must document the phase: "correction" Task input field');
+  assert.ok(body.includes('original_draft'), 'agent body must reference the original_draft input field');
+  assert.ok(body.includes('corrections'), 'agent body must reference the corrections input field');
+  assert.ok(body.toLowerCase().includes('voice guide proposal') || body.toLowerCase().includes('voice-guide proposal'),
+    'agent body must describe the voice-guide proposals output section');
+  assert.ok(body.toLowerCase().includes('never write to a file') || body.toLowerCase().includes('do not write to'),
+    'agent body must forbid file writes in correction mode (command owns persistence)');
+});
+
 // === GHOST COMMAND TESTS ===
 
 test('counterbalance.AC3.1: commands/ghost.md has description, allowed-tools, argument-hint', async () => {
