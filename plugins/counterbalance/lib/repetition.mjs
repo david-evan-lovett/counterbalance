@@ -45,7 +45,7 @@ export async function review({ draft, filePath, voiceProfile } = {}) {
     );
 
     const findings = [];
-    const wasOverThreshold = new Map(); // word -> was count > THRESHOLD in previous window?
+    const previouslyFlagged = new Map(); // word -> last window index where emitted
 
     const windowCount = sentenceWords.length < WINDOW_SIZE
         ? 1
@@ -61,8 +61,8 @@ export async function review({ draft, filePath, voiceProfile } = {}) {
         }
         for (const [word, count] of counts) {
             if (count > THRESHOLD) {
-                const wasOver = wasOverThreshold.get(word) ?? false;
-                if (!wasOver) {
+                const last = previouslyFlagged.get(word);
+                if (last === undefined || last < i - 1) {
                     findings.push({
                         line: findLineOfSnippet(draft, sentences[i]),
                         severity: 'note',
@@ -72,9 +72,7 @@ export async function review({ draft, filePath, voiceProfile } = {}) {
                         suggested: 'vary the word choice or restructure'
                     });
                 }
-                wasOverThreshold.set(word, true);
-            } else {
-                wasOverThreshold.set(word, false);
+                previouslyFlagged.set(word, i);
             }
         }
     }
@@ -83,7 +81,7 @@ export async function review({ draft, filePath, voiceProfile } = {}) {
 }
 
 // CLI entry (same pattern as readability.mjs — copy verbatim)
-if (import.meta.url === `file://${resolvePath(process.argv[1] ?? '')}`) {
+if (fileURLToPath(import.meta.url) === resolvePath(process.argv[1] ?? '')) {
     const args = process.argv.slice(2);
     const getFlag = (name) => {
         const pair = args.find(a => a.startsWith(`--${name}=`));

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { review } from '../plugins/counterbalance/lib/repetition.mjs';
 
 test('prose-review-suite.AC3.5: empty draft returns empty findings', async () => {
@@ -95,4 +96,20 @@ test('finding carries line number pointing at the window\'s first sentence', asy
     assert(result.findings.length > 0);
     assert(result.findings[0].line >= 1);
     assert(typeof result.findings[0].line === 'number');
+});
+
+test('prose-review-suite.AC3.2: sparse clusters (word concentrated in separated single sentences) produce two findings', async () => {
+    const draft = 'Alpha alpha alpha alpha here. Boring one. Boring two. Boring three. Boring four. Boring five. Boring six. Boring seven. Boring eight. Boring nine. Alpha alpha alpha alpha here. Extra one. Extra two. Extra three. Extra four.';
+    const result = await review({ draft });
+    const alphaFindings = result.findings.filter(f => f.quote === 'alpha');
+    assert.strictEqual(alphaFindings.length, 2, 'expected two separate alpha clusters to be flagged');
+});
+
+test('CLI entry: repetition prints JSON and exits 0', () => {
+    const draft = 'Hello world.';
+    const res = spawnSync('node', ['plugins/counterbalance/lib/repetition.mjs', `--draft=${draft}`], { encoding: 'utf8' });
+    assert.strictEqual(res.status, 0, `stderr: ${res.stderr}`);
+    const parsed = JSON.parse(res.stdout);
+    assert.strictEqual(parsed.reviewer, 'repetition');
+    assert.ok(Array.isArray(parsed.findings));
 });
