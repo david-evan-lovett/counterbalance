@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { resolve as resolvePath } from 'node:path';
 import sbd from 'sbd';
 import { stripMarkdown } from './md-preprocess.mjs';
@@ -62,7 +63,7 @@ export async function review({ draft, filePath, voiceProfile } = {}) {
 }
 
 // CLI entry — same pattern as readability.mjs
-if (import.meta.url === `file://${resolvePath(process.argv[1] ?? '')}`) {
+if (fileURLToPath(import.meta.url) === resolvePath(process.argv[1] ?? '')) {
     const args = process.argv.slice(2);
     const getFlag = (name) => {
         const pair = args.find(a => a.startsWith(`--${name}=`));

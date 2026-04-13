@@ -64,7 +64,7 @@ export async function review({ draft, filePath, voiceProfile } = {}) {
 }
 
 // CLI entry
-if (import.meta.url === `file://${resolvePath(process.argv[1] ?? '')}`) {
+if (fileURLToPath(import.meta.url) === resolvePath(process.argv[1] ?? '')) {
     const args = process.argv.slice(2);
     const getFlag = (name) => {
         const pair = args.find(a => a.startsWith(`--${name}=`));
