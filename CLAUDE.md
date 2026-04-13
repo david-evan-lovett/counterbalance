@@ -100,13 +100,14 @@ First layer that parses cleanly wins. `resolveVoice(cwd)` returns `VoiceProfile 
 
 **Null resolution is a bounce, not a fallback.** If all four layers miss, `/ghost` and `/voice-check` refuse to dispatch and point the user at `/voice-refresh`. There is no generic fallback voice — `references/fallback-voice.md` was deleted along with the old "silent fallback" pattern. The voice-reviewer agent handles null as a structured `{findings: [], error: ...}` payload so `/prose-review` can still run a multi-reviewer batch and surface the error in its errors section.
 
-**Drafts directory resolver (`lib/drafts-dir.mjs`) walks three layers:**
+**Drafts directory resolver (`lib/drafts-dir.mjs`) walks two layers:**
 
 1. `--out=<path>` (explicit flag, resolved against cwd if relative)
-2. A `drafts` directory in the current working directory, if it exists (existence is the opt-in signal — no config needed)
-3. `<home>/.claude/plugins/data/counterbalance/drafts/<cwd-basename>` (user-level default, auto-created on first use)
+2. `<cwd>/drafts` (default — auto-created if missing)
 
-`resolveDraftsDir({cwd, outFlag})` returns an absolute path. Basename collisions in layer 3 are accepted (no git-remote or full-path fingerprinting) — the rare case where two repos share a basename is solved by passing `--out=`. The CLI form `node lib/drafts-dir.mjs --cwd=$PWD [--out=<path>]` prints the resolved absolute path. Unlike the voice resolver, drafts-dir exits non-zero on failure — there is no useful "null" state when you need a real directory to write to.
+Drafts default to project-local because drafts belong next to the work they're about. The cascade used to have a user-level fallback at `~/.claude/plugins/data/counterbalance/drafts/<cwd-basename>/` but that was removed after the first real dogfood run — the fallback path was unfriendly to type and surprising in practice. When `/ghost` runs outside any project (e.g., from a shell in the home directory), the resolver still creates a `drafts/` folder at the current working directory, which is almost always what the user meant by running `/ghost` there.
+
+`resolveDraftsDir({cwd, outFlag})` returns an absolute path. The CLI form `node lib/drafts-dir.mjs --cwd=$PWD [--out=<path>]` prints the resolved path. Drafts-dir exits non-zero on any failure — most notably when a FILE named `drafts` already exists in cwd (surfaces as `EEXIST`/`ENOTDIR` from the underlying `mkdir`), which is a clear error the caller can relay verbatim.
 
 **Correction parser (`lib/correction-parser.mjs`)** extracts `<-` markers out of a draft file for `/ghost-correct`. Parses lines outside fenced code blocks and inline backtick spans, returns `{line, original, replacement}[]` with 1-indexed line numbers. Lines where either side of the arrow trims to empty are dropped (starts-with-`<-` is a general note per the drafter SKILL.md, ends-with-`<-` is a typo). The module ships as both ESM and a CLI: `node lib/correction-parser.mjs --file=<draft-path>` prints the parsed JSON array.
 
