@@ -25,6 +25,12 @@ jobs:
             - name: Install dependencies
               run: npm install
 
+            - name: Install plugin runtime dependencies
+              # Mechanical reviewer libs import sbd/syllable/flesch-kincaid,
+              # which are declared in plugins/counterbalance/package.json and
+              # are not hoisted to the repo-root node_modules.
+              run: cd plugins/counterbalance && npm install
+
             - name: Install Claude Code CLI
               run: npm install -g @anthropic-ai/claude-code@latest
               # NOTE: pin exact version once you have a known-good one.
