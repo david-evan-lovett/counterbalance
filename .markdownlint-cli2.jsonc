@@ -2,7 +2,7 @@
     "config": {
         "default": true,
         "MD013": false,
-        "MD024": false,
+        "MD024": { "siblings_only": true },
         "MD040": {
             "allowed_languages": [
                 "bash",
