@@ -24,6 +24,8 @@ export async function runMechReview({ reviewerIds = [], draft = '', filePath, vo
             if (!result || typeof result !== 'object' || !('reviewer' in result) || !('findings' in result)) {
                 return { reviewer: id, findings: [], error: 'invalid reviewer output shape' };
             }
+            // NOTE: result.reviewer is the lib module's self-identifier, not the registry id.
+            // Callers correlating back to the registry must map via REVIEWER_MAP.
             return result;
         } catch (err) {
             return { reviewer: id, findings: [], error: err?.message ?? String(err) };
