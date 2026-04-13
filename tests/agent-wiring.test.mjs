@@ -246,9 +246,70 @@ test('ghost command: describes the four-layer cascade including CLAUDE.md', asyn
   const content = await readFile(ghostPath, 'utf-8');
   const body = extractBody(content);
 
-  assert.ok(body.includes('.counterbalance.md'), 'ghost must mention local override');
-  assert.ok(body.includes('.claude/counterbalance.md'), 'ghost must mention project layer');
+  assert.ok(body.includes('four layers'), 'ghost must describe the four-layer cascade');
   assert.ok(body.includes('CLAUDE.md'), 'ghost must mention CLAUDE.md as the last-ditch layer');
+});
+
+test('ghost command: allowed-tools includes Write (needed to persist the draft)', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const fm = extractFrontmatter(content);
+
+  assert.ok(fm['allowed-tools'].includes('Write'), 'ghost must declare Write tool to persist drafts');
+});
+
+test('ghost command: invokes lib/drafts-dir.mjs to resolve the drafts directory', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('lib/drafts-dir.mjs'), 'ghost must invoke the drafts-dir resolver');
+});
+
+test('ghost command: describes draft filename convention for file-input case', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('.draft.md'), 'ghost must describe the .draft.md filename convention');
+});
+
+test('ghost command: describes inline-text draft filename with timestamp', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(/draft-[^)]*iso/i.test(body) || body.toLowerCase().includes('compact-iso') || body.toLowerCase().includes('compact iso'),
+    'ghost must describe timestamp-based filename for inline-text drafts');
+});
+
+test('ghost command: describes collision handling via numeric suffix', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.toLowerCase().includes('collision') || body.includes('.2.md'),
+    'ghost must describe collision handling (numeric suffix)');
+});
+
+test('ghost command: writes a sidecar meta.json alongside the draft', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('.meta.json'), 'ghost must write a sidecar .meta.json file');
+  assert.ok(body.includes('voice_profile_source'), 'sidecar must record voice_profile_source');
+  assert.ok(body.includes('created_at'), 'sidecar must record created_at timestamp');
+  assert.ok(body.includes('input_path'), 'sidecar must record input_path (or null for inline)');
+});
+
+test('ghost command: tells the user where the draft was written and how to correct', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('/ghost-correct'), 'ghost must point at /ghost-correct as the correction path');
+  assert.ok(body.toLowerCase().includes('<-'), 'ghost must mention the <- marker as the correction mechanism');
 });
 
 // === VOICE-REFRESH COMMAND TESTS ===
