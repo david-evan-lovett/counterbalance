@@ -9,6 +9,7 @@ user-invocable: false
 ## When to use this skill
 
 Use this skill when the user asks any of:
+
 - "Review this draft"
 - "Check my prose"
 - "What's wrong with this essay"
@@ -22,6 +23,7 @@ If the user names a specific reviewer (e.g., "check for cliches", "run readabili
 Runs multiple prose reviewers in parallel against a single draft and produces one merged, line-sorted report. Reviewers split into two kinds:
 
 **Judgment reviewers** (Claude subagents, Sonnet-pinned):
+
 - voice-check — draft vs. active voice profile
 - cliche-check — AI-slop phrases, stock metaphors, oily cadence, extended metaphors
 - opener-check — hedge-first, "but it was", "not X but Y", filler-first openers
@@ -29,6 +31,7 @@ Runs multiple prose reviewers in parallel against a single draft and produces on
 - concrete-check — evaluations without evidence, abstract scenes
 
 **Mechanical reviewers** (pure Node functions, no LLM cost):
+
 - readability — Flesch-Kincaid grade 9–13 band check
 - repetition-check — non-stopword overuse within 5-sentence windows
 - spread-check — 4+ consecutive sentences in the same length bucket
@@ -50,7 +53,7 @@ The prose-review meta-command orchestrates the full fan-out in seven stages:
 
 Header line with reviewer list and severity counts. Then one block per finding:
 
-```
+```text
 **Line N** — [reviewer] — severity — rule
 > quoted offending text
 message text

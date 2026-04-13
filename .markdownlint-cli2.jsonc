@@ -28,7 +28,8 @@
         "README.md",
         "CHANGELOG.md",
         "plugins/counterbalance/skills/counterbalance/SKILL.md",
-        "plugins/counterbalance/skills/counterbalance/references/*.md"
+        "plugins/counterbalance/skills/counterbalance/references/*.md",
+        "plugins/counterbalance/skills/prose-review/SKILL.md"
     ],
     "ignores": [
         "node_modules/**",
