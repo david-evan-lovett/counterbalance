@@ -73,7 +73,7 @@ plugins/counterbalance/
 ├── skills/
 │   ├── counterbalance/
 │   │   ├── SKILL.md                  # drafter skill
-│   │   └── references/               # 6 genre overlays + 3 benchmarks + 1 fallback + 4 rubrics
+│   │   └── references/               # 6 genre overlays + 3 benchmarks + 4 rubrics
 │   └── prose-review/
 │       └── SKILL.md                  # orchestration skill for /prose-review
 └── package.json                      # pins engines floor + lib-reviewer deps (NOT plugin version)
@@ -146,4 +146,4 @@ These are not soft rules. Each is asserted by a test file that will fail CI if v
 - `path.matchesGlob` is used for reviewer applicability — requires forward-slash paths. Windows paths must be normalized via `lib/windows-path.mjs` first.
 - The `parser.mjs` ENOENT branch is intentionally silent. Other fs errors (EACCES, EIO, ELOOP) warn and return null — don't collapse them.
 - Voice Discovery's CLAUDE.md migration flow is in `agents/counterbalance.md`, not in a lib file. The match heuristic is a regex on headings matching `/voice|writing|tone|style|register|sentence/i`.
-- The skill at `plugins/counterbalance/skills/counterbalance/` has 10 reference files: 6 genre overlays (`genre-*.md`), 3 benchmarks (`benchmark-*.md`), and `fallback-voice.md`. `tests/reference-integrity.test.mjs` enforces that every reference the SKILL.md names actually exists.
+- The skill at `plugins/counterbalance/skills/counterbalance/` has 13 reference files: 6 genre overlays (`genre-*.md`), 3 benchmarks (`benchmark-*.md`), and 4 rubrics (`rubric-*.md`). There is no `fallback-voice.md` — it was removed when the resolver grew a four-layer cascade with `$HOME/.claude/CLAUDE.md` as layer 4, and the `/ghost` and `/voice-check` commands learned to bounce on null instead of using a generic fallback. `tests/reference-integrity.test.mjs` still enforces that every reference the SKILL.md names actually exists (the drafter SKILL.md now names zero such files; the check is vacuously true).
