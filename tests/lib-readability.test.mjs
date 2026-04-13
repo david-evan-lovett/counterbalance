@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { spawnSync } from 'node:child_process';
 import { review } from '../plugins/counterbalance/lib/readability.mjs';
 
 test('prose-review-suite.AC3.5: empty draft returns empty findings', async () => {
@@ -53,4 +54,13 @@ test('prose-review-suite.AC3.5: very short draft (insufficient tokens) returns e
     const draft = '...!!!???';
     const result = await review({ draft });
     assert.deepStrictEqual(result, { reviewer: 'readability', findings: [] });
+});
+
+test('CLI entry: readability prints JSON and exits 0', () => {
+    const draft = 'Hello world.';
+    const res = spawnSync('node', ['plugins/counterbalance/lib/readability.mjs', `--draft=${draft}`], { encoding: 'utf8' });
+    assert.strictEqual(res.status, 0, `stderr: ${res.stderr}`);
+    const parsed = JSON.parse(res.stdout);
+    assert.strictEqual(parsed.reviewer, 'readability');
+    assert.ok(Array.isArray(parsed.findings));
 });

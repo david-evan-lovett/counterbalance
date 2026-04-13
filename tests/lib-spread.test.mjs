@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { spawnSync } from 'node:child_process';
 import { review } from '../plugins/counterbalance/lib/spread.mjs';
 
 test('prose-review-suite.AC3.5: empty draft returns empty findings', async () => {
@@ -64,4 +65,13 @@ test('prose-review-suite.AC3.3: sbd handles abbreviations correctly', async () =
     const result = await review({ draft });
     // With 3 sentences, no run of 4, so no findings expected
     assert.strictEqual(result.findings.length, 0, 'Should have no findings (sbd parsed 3 sentences correctly)');
+});
+
+test('CLI entry: spread prints JSON and exits 0', () => {
+    const draft = 'Hello world.';
+    const res = spawnSync('node', ['plugins/counterbalance/lib/spread.mjs', `--draft=${draft}`], { encoding: 'utf8' });
+    assert.strictEqual(res.status, 0, `stderr: ${res.stderr}`);
+    const parsed = JSON.parse(res.stdout);
+    assert.strictEqual(parsed.reviewer, 'spread');
+    assert.ok(Array.isArray(parsed.findings));
 });

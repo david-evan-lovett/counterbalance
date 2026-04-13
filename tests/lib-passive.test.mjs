@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { review } from '../plugins/counterbalance/lib/passive.mjs';
 
 test('prose-review-suite.AC3.5: empty draft returns empty findings', async () => {
@@ -66,4 +67,13 @@ test('multiple findings on the same line', async () => {
     assert.equal(result.findings.length, 2);
     assert.equal(result.findings[0].line, 1);
     assert.equal(result.findings[1].line, 1);
+});
+
+test('CLI entry: passive prints JSON and exits 0', () => {
+    const draft = 'The bug was found.';
+    const res = spawnSync('node', ['plugins/counterbalance/lib/passive.mjs', `--draft=${draft}`], { encoding: 'utf8' });
+    assert.strictEqual(res.status, 0, `stderr: ${res.stderr}`);
+    const parsed = JSON.parse(res.stdout);
+    assert.strictEqual(parsed.reviewer, 'passive');
+    assert.ok(Array.isArray(parsed.findings));
 });
