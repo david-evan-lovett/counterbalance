@@ -47,44 +47,90 @@ The plugin never mutates CLAUDE.md. That's a structural invariant, not a soft ru
 
 ## How to add a reviewer
 
-Counterbalance is designed so that adding a second reviewer (reading-level, AI-slop, grammar, whatever you want to check) requires zero changes to any existing file. The procedure is three files.
+Counterbalance supports two reviewer types — agent-type (Claude subagents) and lib-type (pure Node functions). Adding a reviewer of either kind touches zero existing files and is enforced by `tests/reviewer-extensibility.test.mjs`.
 
-### 1. Add an agent
+### Agent procedure
 
-Create `plugins/counterbalance/agents/my-reviewer.md` with frontmatter:
+Use when the reviewer needs Claude's judgment (cliche detection, style comparison, etc.).
 
-```yaml
----
-name: my-reviewer
-description: Use when reviewing a draft for [whatever you check].
-model: sonnet
-tools: Read, Grep, Glob
----
-```
+1. **Create the agent file** at `plugins/counterbalance/agents/<name>.md`. Frontmatter must include:
 
-The body must document the input shape (`draft`, `filePath`, `voiceProfile`) and emit the output contract `{reviewer, findings: [{line, severity, rule, quote, message, suggested}]}`. Use `agents/voice-reviewer.md` as a template.
+   ```yaml
+   ---
+   name: <agent-name>
+   description: <one-line purpose>
+   model: sonnet
+   tools: Read, Grep, Glob
+   ---
+   ```
 
-**Tools must be scoped to read-only.** Do not declare Write, Edit, or Bash. Reviewers are critics, not drafters. This is enforced at the Claude Code permission layer, not a soft rule — a reviewer that declares Write literally cannot call Write at runtime.
+   The `tools` field is a literal string, not an array. Agent-type reviewers are read-only by construction — Write, Edit, and Bash are forbidden.
 
-### 2. Add a command
+2. **Create the command file** at `plugins/counterbalance/commands/<name>.md`. Frontmatter:
 
-Create `plugins/counterbalance/commands/my-check.md` that dispatches the new agent via the Task tool. Use `commands/voice-check.md` as a template.
+   ```yaml
+   ---
+   description: <one-line purpose>
+   allowed-tools: Task, Read, Bash, Glob
+   argument-hint: "[draft-file-or-inline-text]"
+   ---
+   ```
 
-### 3. Register the reviewer
+   Body follows the template in `commands/voice-check.md`: resolve profile → load draft → dispatch subagent via Task → relay output.
 
-Append an entry to `plugins/counterbalance/reviewers.json`:
+3. **Append to `plugins/counterbalance/reviewers.json`**:
+
+   ```json
+   {
+       "id": "<id>",
+       "type": "agent",
+       "agent": "counterbalance:<agent-name>",
+       "command": "/counterbalance:<command-name>",
+       "applies_to": ["**/*.md", "**/*.mdx"],
+       "description": "..."
+   }
+   ```
+
+### Lib procedure
+
+Use when the reviewer is a deterministic computation (readability metrics, regex matching, etc.). No LLM cost.
+
+1. **Create the lib module** at `plugins/counterbalance/lib/<name>.mjs`. Export:
+
+   ```javascript
+   export async function review({ draft, filePath, voiceProfile }) {
+       return { reviewer: '<id>', findings: [] };
+   }
+   ```
+
+   Also include a CLI entry at the bottom of the file following the pattern in `lib/readability.mjs` — it lets the reviewer be invoked as `node lib/<name>.mjs --file=<path>` for direct testing.
+
+2. **Create the command file** at `plugins/counterbalance/commands/<name>.md`. It's a thin Bash wrapper that resolves the voice profile, writes it to a temp file, and invokes the lib via `node ${CLAUDE_PLUGIN_ROOT}/lib/<name>.mjs --file=<arg> --voice-profile-file=<tmp>`. See `commands/readability.md` as the template.
+
+3. **Append to `plugins/counterbalance/reviewers.json`**:
+
+   ```json
+   {
+       "id": "<id>",
+       "type": "lib",
+       "lib": "<name>.mjs",
+       "command": "/counterbalance:<command-name>",
+       "applies_to": ["**/*.md", "**/*.mdx"],
+       "description": "..."
+   }
+   ```
+
+### Optional: add to a preset
+
+Presets in `reviewers.json` are curated — adding a reviewer does NOT automatically include it. To bundle a new reviewer into an existing preset, add its id to the preset's array. Example:
 
 ```json
-{
-    "id": "my-check",
-    "agent": "counterbalance:my-reviewer",
-    "command": "/counterbalance:my-check",
-    "applies_to": ["**/*.md", "**/*.mdx"],
-    "description": "Short human summary of what this reviewer checks."
+"presets": {
+    "quick": ["readability", "opener-check", "cliche-check", "<new-id>"]
 }
 ```
 
-That's it. Run `node --test tests/reviewer-extensibility.test.mjs` to confirm the new reviewer is picked up — the fixture test hashes every existing file, adds a stub reviewer, re-hashes, and fails if any existing file's hash changed. If that test fires, it means the extension point is broken, not your reviewer.
+The `full` preset uses the `"*"` wildcard and automatically includes every reviewer.
 
 ## Development
 
