@@ -74,15 +74,30 @@ test('counterbalance.AC3.4: agent body contains "<-" correction operator instruc
   );
 });
 
-test('counterbalance.AC3.6: agent body references fallback-voice.md as the null-profile fallback path', async () => {
+test('counterbalance.AC3.6: agent body describes the bounce-on-null behavior in Drafting mode', async () => {
   const agentPath = join(pluginRoot, 'agents', 'counterbalance.md');
   const content = await readFile(agentPath, 'utf-8');
   const body = extractBody(content);
 
   assert.ok(
-    body.includes('fallback-voice.md'),
-    'agent body must reference "fallback-voice.md" for null-profile fallback',
+    body.includes('/voice-refresh'),
+    'agent body must direct users to /voice-refresh when Drafting receives a null profile',
   );
+  assert.ok(
+    !body.includes('fallback-voice.md'),
+    'agent body must NOT reference fallback-voice.md — it was replaced by CLAUDE.md layer 4 + bounce',
+  );
+});
+
+test('counterbalance.AC3.6: agent body describes the four-layer resolver cascade including CLAUDE.md', async () => {
+  const agentPath = join(pluginRoot, 'agents', 'counterbalance.md');
+  const content = await readFile(agentPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('.counterbalance.md'), 'body must mention local override layer');
+  assert.ok(body.includes('.claude/counterbalance.md'), 'body must mention project layer');
+  assert.ok(body.includes('plugins/data/counterbalance/profiles/default.md'), 'body must mention user layer');
+  assert.ok(body.includes('CLAUDE.md'), 'body must mention CLAUDE.md as the last-ditch fallback');
 });
 
 test('counterbalance.AC4.1: agent body references scanning $HOME/.claude/CLAUDE.md', async () => {
@@ -158,6 +173,21 @@ test('counterbalance.AC4.6: agent body says pre-flight is a silent no-op when CL
   );
 });
 
+test('drafter agent: body documents the correction-phase dispatch contract', async () => {
+  const agentPath = join(pluginRoot, 'agents', 'counterbalance.md');
+  const content = await readFile(agentPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('phase: "correction"') || body.includes("phase: 'correction'"),
+    'agent body must document the phase: "correction" Task input field');
+  assert.ok(body.includes('original_draft'), 'agent body must reference the original_draft input field');
+  assert.ok(body.includes('corrections'), 'agent body must reference the corrections input field');
+  assert.ok(body.toLowerCase().includes('voice guide proposal') || body.toLowerCase().includes('voice-guide proposal'),
+    'agent body must describe the voice-guide proposals output section');
+  assert.ok(body.toLowerCase().includes('never write to a file') || body.toLowerCase().includes('do not write to'),
+    'agent body must forbid file writes in correction mode (command owns persistence)');
+});
+
 // === GHOST COMMAND TESTS ===
 
 test('counterbalance.AC3.1: commands/ghost.md has description, allowed-tools, argument-hint', async () => {
@@ -201,6 +231,100 @@ test('counterbalance.AC3.2: commands/ghost.md passes resolved_profile to subagen
   const body = extractBody(content);
 
   assert.ok(body.includes('resolved_profile'), 'ghost command must pass resolved_profile to the subagent');
+});
+
+test('ghost command: bounces to /voice-refresh when resolver returns null', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('/voice-refresh'), 'ghost must point users at /voice-refresh on null');
+  assert.ok(
+    body.toLowerCase().includes('do not dispatch') || body.toLowerCase().includes("don't dispatch"),
+    'ghost must explicitly say not to dispatch the subagent when null',
+  );
+});
+
+test('ghost command: no longer references fallback-voice.md', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(
+    !body.includes('fallback-voice.md'),
+    'ghost must NOT reference fallback-voice.md — the bounce replaced it',
+  );
+});
+
+test('ghost command: describes the four-layer cascade including CLAUDE.md', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('four layers'), 'ghost must describe the four-layer cascade');
+  assert.ok(body.includes('CLAUDE.md'), 'ghost must mention CLAUDE.md as the last-ditch layer');
+});
+
+test('ghost command: allowed-tools includes Write (needed to persist the draft)', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const fm = extractFrontmatter(content);
+
+  assert.ok(fm['allowed-tools'].includes('Write'), 'ghost must declare Write tool to persist drafts');
+});
+
+test('ghost command: invokes lib/drafts-dir.mjs to resolve the drafts directory', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('lib/drafts-dir.mjs'), 'ghost must invoke the drafts-dir resolver');
+});
+
+test('ghost command: describes draft filename convention for file-input case', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('.draft.md'), 'ghost must describe the .draft.md filename convention');
+});
+
+test('ghost command: describes inline-text draft filename with timestamp', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(/draft-[^)]*iso/i.test(body) || body.toLowerCase().includes('compact-iso') || body.toLowerCase().includes('compact iso'),
+    'ghost must describe timestamp-based filename for inline-text drafts');
+});
+
+test('ghost command: describes collision handling via numeric suffix', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.toLowerCase().includes('collision') || body.includes('.2.md'),
+    'ghost must describe collision handling (numeric suffix)');
+});
+
+test('ghost command: writes a sidecar meta.json alongside the draft', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('.meta.json'), 'ghost must write a sidecar .meta.json file');
+  assert.ok(body.includes('voice_profile_source'), 'sidecar must record voice_profile_source');
+  assert.ok(body.includes('created_at'), 'sidecar must record created_at timestamp');
+  assert.ok(body.includes('input_path'), 'sidecar must record input_path (or null for inline)');
+});
+
+test('ghost command: tells the user where the draft was written and how to correct', async () => {
+  const ghostPath = join(pluginRoot, 'commands', 'ghost.md');
+  const content = await readFile(ghostPath, 'utf-8');
+  const body = extractBody(content);
+
+  assert.ok(body.includes('/ghost-correct'), 'ghost must point at /ghost-correct as the correction path');
+  assert.ok(body.toLowerCase().includes('<-'), 'ghost must mention the <- marker as the correction mechanism');
 });
 
 // === VOICE-REFRESH COMMAND TESTS ===

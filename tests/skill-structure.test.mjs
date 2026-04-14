@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import yaml from 'js-yaml';
@@ -9,7 +9,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 const skillPath = path.resolve(repoRoot, 'plugins/counterbalance/skills/counterbalance/SKILL.md');
-const fallbackVoicePath = path.resolve(repoRoot, 'plugins/counterbalance/skills/counterbalance/references/fallback-voice.md');
 
 // Read skill file and extract frontmatter
 const skillContent = await readFile(skillPath, 'utf-8');
@@ -53,12 +52,22 @@ test('counterbalance.AC1.2: SKILL.md body contains <- correction operator instru
   assert.ok(slice.toLowerCase().includes('correction'), 'body should contain "correction" within 1000 characters of "<-"');
 });
 
-test('counterbalance.AC1.3: references/fallback-voice.md exists on disk', async () => {
-  const fileStats = await stat(fallbackVoicePath);
-  assert.ok(fileStats.isFile(), 'fallback-voice.md should be a regular file');
-  assert.ok(fileStats.size > 0, 'fallback-voice.md should be non-empty');
+test('counterbalance.AC1.3: SKILL.md describes the four-layer fallback ladder', () => {
+  assert.ok(body.includes('.counterbalance.md'),       'body should reference the local override layer');
+  assert.ok(body.includes('.claude/counterbalance.md'), 'body should reference the project layer');
+  assert.ok(body.includes('plugins/data/counterbalance/profiles/default.md'), 'body should reference the user layer');
+  assert.ok(body.includes('CLAUDE.md'),                'body should reference CLAUDE.md as the last-ditch layer');
 });
 
-test('counterbalance.AC1.3: SKILL.md references fallback-voice.md', () => {
-  assert.ok(body.includes('references/fallback-voice.md'), 'body should contain literal string "references/fallback-voice.md"');
+test('counterbalance.AC1.3: SKILL.md bounces rather than silently falling back when all layers miss', () => {
+  const bodyLower = body.toLowerCase();
+  assert.ok(bodyLower.includes('/voice-refresh'),
+    'body should direct users to /voice-refresh when resolution fails');
+  assert.ok(bodyLower.includes('bounce') || bodyLower.includes('never operate with no voice'),
+    'body should state the bounce-on-null behavior');
+});
+
+test('counterbalance.AC1.3: SKILL.md no longer references fallback-voice.md as a silent fallback', () => {
+  assert.ok(!body.includes('references/fallback-voice.md'),
+    'body should NOT reference fallback-voice.md — the four-layer ladder + bounce replaced it');
 });

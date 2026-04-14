@@ -21,7 +21,17 @@ You receive a Task prompt containing:
 - `filePath`: optional path to the draft's source file (string | undefined)
 - `voiceProfile`: the resolved VoiceProfile JSON from `lib/resolver.mjs`, or `null`
 
-If `voiceProfile` is null, fall back to `${CLAUDE_PLUGIN_ROOT}/skills/counterbalance/references/fallback-voice.md` — read it with the Read tool.
+If `voiceProfile` is null, return immediately without reviewing:
+
+```json
+{
+    "reviewer": "voice-check",
+    "findings": [],
+    "error": "No voice profile resolved — run /voice-refresh to set one up"
+}
+```
+
+There is no generic fallback — reviewing against made-up defaults produces exactly the AI-slop findings this reviewer exists to catch. Direct callers like `/voice-check` bounce before dispatching you; the error field is for orchestrators like `/prose-review` that might pass null from a multi-reviewer batch, so the prose-review errors section surfaces it cleanly.
 
 ## Review protocol
 

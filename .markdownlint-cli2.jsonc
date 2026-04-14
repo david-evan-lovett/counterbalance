@@ -2,6 +2,7 @@
     "config": {
         "default": true,
         "MD013": false,
+        "MD024": { "siblings_only": true },
         "MD040": {
             "allowed_languages": [
                 "bash",
@@ -28,7 +29,8 @@
         "README.md",
         "CHANGELOG.md",
         "plugins/counterbalance/skills/counterbalance/SKILL.md",
-        "plugins/counterbalance/skills/counterbalance/references/*.md"
+        "plugins/counterbalance/skills/counterbalance/references/*.md",
+        "plugins/counterbalance/skills/prose-review/SKILL.md"
     ],
     "ignores": [
         "node_modules/**",

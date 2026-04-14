@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { loadRegistry, applicableReviewers, aggregateFindings } from '../plugins/counterbalance/lib/reviewers.mjs';
+import { loadRegistry, applicableReviewers } from '../plugins/counterbalance/lib/reviewers.mjs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -73,15 +73,6 @@ test('loadRegistry throws a clear error on malformed JSON', async () => {
     } finally {
         await rm(tmpDir, { recursive: true, force: true });
     }
-});
-
-test('aggregateFindings v1 stub passes outputs through unchanged', () => {
-    const outputs = [
-        { reviewer: 'voice-check', findings: [] },
-        { reviewer: 'voice-check', findings: [{ line: 3, severity: 'warning', rule: 'x', quote: 'q', message: 'm' }] },
-    ];
-    assert.deepStrictEqual(aggregateFindings(outputs), outputs);
-    assert.strictEqual(aggregateFindings(outputs), outputs, 'v1 stub returns the same reference (identity)');
 });
 
 test('loadRegistry throws a clear error when the reviewers array is missing', async () => {

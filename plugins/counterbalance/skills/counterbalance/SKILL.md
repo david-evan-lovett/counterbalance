@@ -30,7 +30,14 @@ Before gathering samples, resolve the active voice profile by shelling out to th
 node "${CLAUDE_PLUGIN_ROOT}/lib/resolver.mjs" --cwd="$PWD" --json
 ```
 
-The resolver prints JSON for a matched profile or the literal string `null`. Three layers are checked in descending precedence: local override (`./.counterbalance.md`), project (`./.claude/counterbalance.md`), user (`$HOME/.claude/plugins/data/counterbalance/profiles/default.md`). If the resolver returns `null`, fall back to `references/fallback-voice.md` as your voice guide — never operate with no voice guidance at all.
+The resolver prints JSON for a matched profile or the literal string `null`. Four layers are checked in descending precedence:
+
+1. `./.counterbalance.md` (local override)
+2. `./.claude/counterbalance.md` (project voice)
+3. `$HOME/.claude/plugins/data/counterbalance/profiles/default.md` (user voice)
+4. A voice-section extraction from `$HOME/.claude/CLAUDE.md` (last-ditch convenience)
+
+Any of the first three layers overrides layer 4 — a configured profile always beats the CLAUDE.md fallback. If the resolver returns `null` even after checking CLAUDE.md, the caller (typically `/ghost`) bounces and tells the user to run `/voice-refresh`. Never operate with no voice guidance at all.
 
 ### When to run
 
@@ -67,9 +74,9 @@ The guide should cover: registers, sentence structure rules, analogy/naming patt
 
 After writing the guide, walk the user through it. They'll correct things. Those corrections are gold — apply them immediately.
 
-### Fallback voice patterns
+### When no voice can be resolved
 
-If no voice guide exists AND the user can't provide sources right now, read `references/fallback-voice.md` for a sensible default. Make it clear to the user that the defaults are temporary and will be replaced once they provide samples.
+If the resolver misses on all four layers, **bounce**. Do not draft with a generic fallback. Tell the user their voice guide is missing and point them at `/voice-refresh`. This is a tool, not a toy — a draft written against a voice guide the user never saw is worse than no draft at all.
 
 ## The Drafting Loop
 
@@ -195,6 +202,6 @@ These are the hard-won lessons from building this workflow. They matter.
 
 ---
 
-### Fallback voice
+### Fallback ladder summary
 
-When no voice profile resolves, read [`references/fallback-voice.md`](references/fallback-voice.md) and use it as the active voice guide for the session.
+The four-layer resolver cascade handles voice guide resolution end-to-end: local override, project, user, and finally a voice-section extraction from `$HOME/.claude/CLAUDE.md`. If all four miss, the caller bounces the user toward `/voice-refresh`. There is no generic fallback content — a tool that drafts without a voice guide is a tool producing AI slop, which is exactly what this plugin exists to prevent.

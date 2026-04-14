@@ -152,24 +152,126 @@ test('counterbalance.AC2.4: project wins when local absent', async (t) => {
 
 test('counterbalance.AC2.5: nothing exists — returns null', async (t) => {
   const tempDir = await mkdtemp(join(os.tmpdir(), 'counterbalance-resolver-'));
+  const homeTemp = await mkdtemp(join(os.tmpdir(), 'counterbalance-home-'));
 
   const origHome = process.env.HOME;
   const origUserprofile = process.env.USERPROFILE;
 
   try {
-    // No profiles at all, no HOME override
-    if (origHome) process.env.HOME = '';
-    if (origUserprofile) delete process.env.USERPROFILE;
+    // Point HOME at a clean temp dir so layer 4 (CLAUDE.md) also misses
+    process.env.HOME = homeTemp;
+    if (process.env.USERPROFILE) delete process.env.USERPROFILE;
 
     const profile = await resolveVoice(tempDir);
 
-    assert.strictEqual(profile, null, 'should return null when nothing exists');
+    assert.strictEqual(profile, null, 'should return null when nothing exists at any layer');
   } finally {
     if (origHome) process.env.HOME = origHome;
     else delete process.env.HOME;
     if (origUserprofile) process.env.USERPROFILE = origUserprofile;
 
     await rm(tempDir, { recursive: true, force: true });
+    await rm(homeTemp, { recursive: true, force: true });
+  }
+});
+
+// === Layer 4: CLAUDE.md fallback ===
+
+test('counterbalance.AC2.7: layer 4 fires when CLAUDE.md has a voice section and nothing else exists', async () => {
+  const tempDir = await mkdtemp(join(os.tmpdir(), 'counterbalance-resolver-'));
+  const homeTemp = await mkdtemp(join(os.tmpdir(), 'counterbalance-home-'));
+
+  const origHome = process.env.HOME;
+  const origUserprofile = process.env.USERPROFILE;
+
+  try {
+    const claudeMdPath = join(homeTemp, '.claude', 'CLAUDE.md');
+    await mkdir(join(homeTemp, '.claude'), { recursive: true });
+    await writeFile(
+      claudeMdPath,
+      '# Global CLAUDE.md\n\n## My Voice\n\nLead with the verb.\n',
+      'utf-8',
+    );
+
+    process.env.HOME = homeTemp;
+    if (process.env.USERPROFILE) delete process.env.USERPROFILE;
+
+    const profile = await resolveVoice(tempDir);
+
+    assert.ok(profile, 'should return a profile from CLAUDE.md');
+    assert.strictEqual(profile.source, 'claude-md');
+    assert.strictEqual(profile.id, 'claude-md-fallback');
+    assert.ok(profile.body.includes('Lead with the verb.'));
+    assert.strictEqual(profile.frontmatter.heading, 'My Voice');
+  } finally {
+    if (origHome) process.env.HOME = origHome;
+    else delete process.env.HOME;
+    if (origUserprofile) process.env.USERPROFILE = origUserprofile;
+
+    await rm(tempDir, { recursive: true, force: true });
+    await rm(homeTemp, { recursive: true, force: true });
+  }
+});
+
+test('counterbalance.AC2.7: layer 4 does NOT fire when CLAUDE.md exists but has no voice section', async () => {
+  const tempDir = await mkdtemp(join(os.tmpdir(), 'counterbalance-resolver-'));
+  const homeTemp = await mkdtemp(join(os.tmpdir(), 'counterbalance-home-'));
+
+  const origHome = process.env.HOME;
+  const origUserprofile = process.env.USERPROFILE;
+
+  try {
+    const claudeMdPath = join(homeTemp, '.claude', 'CLAUDE.md');
+    await mkdir(join(homeTemp, '.claude'), { recursive: true });
+    await writeFile(claudeMdPath, '# Global CLAUDE.md\n\n## Projects\n\nNothing about voice.\n', 'utf-8');
+
+    process.env.HOME = homeTemp;
+    if (process.env.USERPROFILE) delete process.env.USERPROFILE;
+
+    const profile = await resolveVoice(tempDir);
+
+    assert.strictEqual(profile, null, 'should return null when CLAUDE.md has no voice section');
+  } finally {
+    if (origHome) process.env.HOME = origHome;
+    else delete process.env.HOME;
+    if (origUserprofile) process.env.USERPROFILE = origUserprofile;
+
+    await rm(tempDir, { recursive: true, force: true });
+    await rm(homeTemp, { recursive: true, force: true });
+  }
+});
+
+test('counterbalance.AC2.7: layers 1-3 override layer 4 when both exist', async () => {
+  const tempDir = await mkdtemp(join(os.tmpdir(), 'counterbalance-resolver-'));
+  const homeTemp = await mkdtemp(join(os.tmpdir(), 'counterbalance-home-'));
+
+  const origHome = process.env.HOME;
+  const origUserprofile = process.env.USERPROFILE;
+
+  try {
+    // Set up a user-layer profile AND a CLAUDE.md voice section
+    const userFile = join(homeTemp, '.claude', 'plugins', 'data', 'counterbalance', 'profiles', 'default.md');
+    await mkdir(dirname(userFile), { recursive: true });
+    await writeFile(userFile, '---\nid: real-profile\n---\nReal voice content\n', 'utf-8');
+
+    const claudeMdPath = join(homeTemp, '.claude', 'CLAUDE.md');
+    await writeFile(claudeMdPath, '## My Voice\n\nFallback voice content.\n', 'utf-8');
+
+    process.env.HOME = homeTemp;
+    if (process.env.USERPROFILE) delete process.env.USERPROFILE;
+
+    const profile = await resolveVoice(tempDir);
+
+    assert.ok(profile);
+    assert.strictEqual(profile.source, 'user', 'user layer must override CLAUDE.md layer');
+    assert.strictEqual(profile.id, 'real-profile');
+  } finally {
+    if (origHome) process.env.HOME = origHome;
+    else delete process.env.HOME;
+    if (origUserprofile) process.env.USERPROFILE = origUserprofile;
+
+    await rm(tempDir, { recursive: true, force: true });
+    await rm(homeTemp, { recursive: true, force: true });
   }
 });
 
@@ -199,18 +301,25 @@ test('counterbalance.AC2.6: Windows-style backslash path in cwd resolves correct
 
 test('resolver CLI: --cwd with no match prints "null" and exits 0', async (t) => {
   const tempDir = await mkdtemp(join(os.tmpdir(), 'counterbalance-resolver-'));
+  const homeTemp = await mkdtemp(join(os.tmpdir(), 'counterbalance-home-'));
 
   try {
-    // Empty directory, no profiles
+    // Point HOME at a clean temp dir so layer 4 (CLAUDE.md) also misses —
+    // without this, the test inherits the real developer HOME and a voice
+    // section in ~/.claude/CLAUDE.md would flip this expectation.
     const result = execFileSync('node', [
       join(process.cwd(), 'plugins/counterbalance/lib/resolver.mjs'),
       `--cwd=${tempDir}`,
       '--json'
-    ], { encoding: 'utf-8' });
+    ], {
+      encoding: 'utf-8',
+      env: { ...process.env, HOME: homeTemp, USERPROFILE: homeTemp },
+    });
 
     assert.strictEqual(result, 'null', 'should print "null"');
   } finally {
     await rm(tempDir, { recursive: true, force: true });
+    await rm(homeTemp, { recursive: true, force: true });
   }
 });
 

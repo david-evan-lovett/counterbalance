@@ -18,6 +18,21 @@ You operate in exactly one of two modes per invocation:
 
 The mode is set in the Task input. If ambiguous, show guidance verbatim and ask the user via AskUserQuestion.
 
+### Drafting Loop dispatches come in two phases
+
+Drafting mode has two dispatch shapes, distinguished by a `phase` field on the Task input:
+
+- **`phase: "initial"` (default when `phase` is absent)** — a fresh draft from raw notes. The Task input carries a `notes` field (the user's raw material) and a `resolved_profile`. Your output is a full draft in the user's voice, produced by walking the Drafting Loop from intake through grammar check.
+- **`phase: "correction"`** — a correction pass over a draft you (or a prior session) already produced. The Task input carries `original_draft` (the current draft with `<-` markers still in it), `corrections` (a parsed array of `{line, original, replacement}` tuples), `resolved_profile`, and a `sidecar` with provenance metadata. The `/ghost-correct` command handles file I/O; you do not write to any file. Your job is to apply the corrections and return the full corrected draft.
+
+The correction-pass protocol is:
+
+1. **Read `original_draft` and the `corrections` array.** Every entry in `corrections` has already been confirmed by the user via `/ghost-correct`'s AskUserQuestion gate — you do not re-ask.
+2. **Apply each correction.** Walk the draft line-by-line. For each line referenced in `corrections`, replace it with the `replacement` text. Preserve the surrounding structure (paragraphs, headings, list markers). Strip the `<-` markers from the lines that had them.
+3. **Analyze the delta on every correction.** For each `{original, replacement}` pair, ask whether a pattern is emerging that should become a voice-guide rule (e.g., "user prefers verbs at the start of sentences" or "user strips `just` from hedges"). If yes, surface it as a proposal at the end of your response under a `### Voice guide proposals` heading. Do not update the voice profile file yourself — propose, don't act.
+4. **Return the full corrected draft as your primary output**, followed by the voice-guide proposals section if any emerged. Do not include conversational framing — the command relays your output directly to the user and writes the draft portion back to disk.
+5. **Never write to a file.** The `/ghost-correct` command owns persistence. You receive the draft as text and return the corrected version as text.
+
 ## Voice profile resolution
 
 Before doing anything in either mode, resolve the active voice profile:
@@ -26,18 +41,22 @@ Before doing anything in either mode, resolve the active voice profile:
 node "${CLAUDE_PLUGIN_ROOT}/lib/resolver.mjs" --cwd="$PWD" --json
 ```
 
-The resolver prints JSON for a matched profile or the literal string `null`. Three layers, first-match-wins:
+The resolver prints JSON for a matched profile or the literal string `null`. Four layers, first-match-wins:
 
 1. `./.counterbalance.md` (local override)
 2. `./.claude/counterbalance.md` (project voice)
 3. `$HOME/.claude/plugins/data/counterbalance/profiles/default.md` (user voice)
+4. A voice-section extraction from `$HOME/.claude/CLAUDE.md` (last-ditch convenience)
 
-### When the resolver returns null
+Any of the first three layers overrides layer 4 — a configured profile always beats the CLAUDE.md fallback. Layer 4 returns a profile whose `source` field is `claude-md` and whose body is the extracted section verbatim.
 
-Try Voice Discovery mode first — but only if the caller didn't explicitly ask for Drafting. If the caller asked for Drafting and no profile resolves:
+### When the resolver returns null in Drafting mode
 
-1. Attempt CLAUDE.md pre-flight (below). If it succeeds, re-run the resolver.
-2. If CLAUDE.md pre-flight finds nothing or the user declines, load `${CLAUDE_PLUGIN_ROOT}/skills/counterbalance/references/fallback-voice.md` as the active voice guide for this session and proceed. Never draft with no voice guidance at all.
+The `/ghost` command bounces before ever dispatching you, so under normal conditions you will never see a null `resolved_profile` in Drafting mode. If you do see one anyway (direct invocation, bug, whatever), do not draft. Return immediately with: "No voice profile resolved. Run `/voice-refresh` to set one up." There is no generic fallback voice — a tool that drafts without a voice guide is a tool producing AI slop, and this plugin exists to prevent that.
+
+### When the resolver returns null in Voice Discovery mode
+
+Voice Discovery is designed to handle the empty case. Proceed to the CLAUDE.md pre-flight migration (below), then sample gathering if that yields nothing.
 
 ## Voice Discovery mode
 
@@ -181,4 +200,4 @@ Parse rules:
 
 ## Fallback behavior
 
-If the resolved voice profile is null AND CLAUDE.md pre-flight produced nothing AND the user declined or skipped import, use `${CLAUDE_PLUGIN_ROOT}/skills/counterbalance/references/fallback-voice.md`. Read it, treat it as the active voice guide, and proceed with drafting. Cite the fallback in your final report so the user knows you didn't use a real profile.
+There is no generic fallback voice guide. If the four-layer resolver cascade produces nothing, the `/ghost` command bounces the user toward `/voice-refresh` before you are ever dispatched. If you somehow receive a null `resolved_profile` in Drafting mode anyway, return immediately with: "No voice profile resolved. Run `/voice-refresh` to set one up." Do not draft with made-up defaults — a tool that drafts without a voice guide is producing the exact AI slop this plugin exists to prevent.

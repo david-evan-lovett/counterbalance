@@ -27,8 +27,9 @@ while ((match = referenceRegex.exec(skillContent)) !== null) {
 }
 
 test('counterbalance.AC7.4: every references/*.md mentioned in SKILL.md exists on disk', async () => {
-  assert.ok(mentionedFilenames.size > 0, 'SKILL.md should mention at least one reference file');
-
+  // SKILL.md may mention zero reference files — the drafter skill no longer
+  // cites fallback-voice.md after the four-layer resolver + bounce replaced it.
+  // The test's purpose is to catch broken links, not to require references.
   for (const filename of mentionedFilenames) {
     const filePath = path.resolve(referencesDir, filename);
     try {
@@ -168,5 +169,38 @@ test('reference integrity: every reviewers.json agent entry points to an existin
         assert.fail(`reviewers.json: agent "${reviewer.agent}" does not exist at ${agentPath}`);
       }
     }
+  }
+});
+
+test('prose-review-suite.AC5.3: all rubric reference files exist', async () => {
+  const rubricFiles = [
+    'rubric-cliche.md',
+    'rubric-opener.md',
+    'rubric-cuttability.md',
+    'rubric-concrete.md'
+  ];
+  const referencesDir = path.resolve(repoRoot, 'plugins/counterbalance/skills/counterbalance/references');
+  for (const file of rubricFiles) {
+    const filePath = path.resolve(referencesDir, file);
+    const fileStat = await stat(filePath);
+    assert.ok(fileStat.isFile(), `rubric file ${file} must exist`);
+  }
+});
+
+test('prose-review-suite.AC5.3: each rubric is referenced by exactly one agent', async () => {
+  const rubricFiles = [
+    'rubric-cliche.md',
+    'rubric-opener.md',
+    'rubric-cuttability.md',
+    'rubric-concrete.md'
+  ];
+  const agentsDir = path.resolve(repoRoot, 'plugins/counterbalance/agents');
+  const entries = await readdir(agentsDir);
+  const agentFiles = entries.filter(n => n.endsWith('.md'));
+  const contents = await Promise.all(agentFiles.map(f => readFile(path.resolve(agentsDir, f), 'utf-8')));
+
+  for (const rubric of rubricFiles) {
+    const count = contents.filter(c => c.includes(`references/${rubric}`)).length;
+    assert.strictEqual(count, 1, `rubric ${rubric} must be referenced by exactly one agent, found ${count}`);
   }
 });

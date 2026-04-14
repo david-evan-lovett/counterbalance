@@ -1,7 +1,14 @@
 {
+    "presets": {
+        "quick":      ["readability", "opener-check", "cliche-check"],
+        "voice":      ["voice-check", "cliche-check", "opener-check", "cut-check", "concrete-check"],
+        "mechanical": ["readability", "repetition-check", "spread-check", "passive-check"],
+        "full":       ["*"]
+    },
     "reviewers": [
         {
             "id": "voice-check",
+            "type": "agent",
             "agent": "counterbalance:voice-reviewer",
             "command": "/counterbalance:voice-check",
             "applies_to": [
@@ -9,6 +16,94 @@
                 "**/*.mdx"
             ],
             "description": "Checks a draft against the active voice profile and flags violations as line-referenced findings."
+        },
+        {
+            "id": "readability",
+            "type": "lib",
+            "lib": "readability.mjs",
+            "command": "/counterbalance:readability",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Flesch-Kincaid grade-level check. Flags drafts outside the 9–13 band."
+        },
+        {
+            "id": "repetition-check",
+            "type": "lib",
+            "lib": "repetition.mjs",
+            "command": "/counterbalance:repetition-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Flags non-stopword overuse within any 5-sentence sliding window."
+        },
+        {
+            "id": "spread-check",
+            "type": "lib",
+            "lib": "spread.mjs",
+            "command": "/counterbalance:spread-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Flags runs of 4+ consecutive sentences in the same length bucket."
+        },
+        {
+            "id": "passive-check",
+            "type": "lib",
+            "lib": "passive.mjs",
+            "command": "/counterbalance:passive-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Passive-voice heuristic via to-be verb + past participle matching."
+        },
+        {
+            "id": "cliche-check",
+            "type": "agent",
+            "agent": "counterbalance:cliche-hunter",
+            "command": "/counterbalance:cliche-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Scans a draft for cliches — AI-slop phrases, stock metaphors, oily cadence, extended metaphors."
+        },
+        {
+            "id": "opener-check",
+            "type": "agent",
+            "agent": "counterbalance:opener-check",
+            "command": "/counterbalance:opener-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Scans a draft for forbidden opener patterns (hedges, \"but it was\", \"not X but Y\", fillers)."
+        },
+        {
+            "id": "cut-check",
+            "type": "agent",
+            "agent": "counterbalance:cuttability",
+            "command": "/counterbalance:cut-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Scans a draft for cuttable content — filler adverbs, redundant clauses, setup sentences."
+        },
+        {
+            "id": "concrete-check",
+            "type": "agent",
+            "agent": "counterbalance:concrete-vs-abstract",
+            "command": "/counterbalance:concrete-check",
+            "applies_to": [
+                "**/*.md",
+                "**/*.mdx"
+            ],
+            "description": "Scans a draft for evaluations without evidence and abstract scenes that should be concrete."
         }
     ]
 }
